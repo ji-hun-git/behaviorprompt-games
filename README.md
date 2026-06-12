@@ -19,6 +19,8 @@ The first interface includes:
 - JSON benchmark-manifest export and CSV run export
 - readiness tracking for environments, demos, agent adapters, metrics, and paper
   positioning
+- deterministic simulated evaluator using game complexity, prompt sensitivity,
+  agent profile, batch size, demo budget, and prompt condition
 - condition comparison, sufficiency matrix, and benchmark coverage views
 - classic-inspired game counts across 12 task templates, 1,008 generated
   levels, 276 held-out transfer levels, and 2,990 behavior demo clips
@@ -69,6 +71,12 @@ direct reproductions of the original games.
 | Invader Defense | 52 | 20 | 210 |
 | Platform Rescue | 56 | 20 | 220 |
 | Dungeon Key Quest | 84 | 32 | 360 |
+
+## Logic Notes
+
+The dashboard currently uses a deterministic simulated evaluator for planning
+experiments. See [docs/evaluator-logic.md](docs/evaluator-logic.md) for the
+inputs, derived scores, and verdict rules.
 
 ## Development
 

@@ -21,9 +21,13 @@ type Run = MetricSet & {
   familyId: FamilyId;
   conditionId: ConditionId;
   budgetId: BudgetId;
+  gameName: string;
   agent: string;
   seed: number;
   batch: number;
+  evaluator: string;
+  promptMargin: number;
+  sampleEfficiency: number;
 };
 
 type TaskFamily = {
@@ -55,7 +59,17 @@ type ClassicGameBenchmark = {
   trainMaps: number;
   evalMaps: number;
   demoClips: number;
+  complexity: number;
+  promptSensitivity: number;
   targetInference: string;
+};
+
+type AgentProfile = {
+  behaviorSkill: number;
+  languageSkill: number;
+  causalSkill: number;
+  socialSkill: number;
+  sampleEfficiency: number;
 };
 
 type ReadinessStatus = "planned" | "building" | "ready";
@@ -231,6 +245,37 @@ const demoBudgets: Array<{
 
 const agents = ["BC-Transformer", "VLM-Planner", "World-Model RL", "GameGPT-Agent"];
 
+const agentProfiles: Record<string, AgentProfile> = {
+  "BC-Transformer": {
+    behaviorSkill: 4,
+    languageSkill: 1,
+    causalSkill: 2,
+    socialSkill: 1,
+    sampleEfficiency: 3,
+  },
+  "VLM-Planner": {
+    behaviorSkill: 3,
+    languageSkill: 3,
+    causalSkill: 2,
+    socialSkill: 3,
+    sampleEfficiency: 2,
+  },
+  "World-Model RL": {
+    behaviorSkill: 2,
+    languageSkill: 1,
+    causalSkill: 5,
+    socialSkill: 1,
+    sampleEfficiency: 2,
+  },
+  "GameGPT-Agent": {
+    behaviorSkill: 3,
+    languageSkill: 4,
+    causalSkill: 3,
+    socialSkill: 3,
+    sampleEfficiency: 4,
+  },
+};
+
 const classicGameBenchmarks: ClassicGameBenchmark[] = [
   {
     name: "Pong-like Rally",
@@ -238,6 +283,8 @@ const classicGameBenchmarks: ClassicGameBenchmark[] = [
     trainMaps: 40,
     evalMaps: 16,
     demoClips: 180,
+    complexity: 2,
+    promptSensitivity: 3,
     targetInference: "turn-taking, pursuit, and defensive positioning",
   },
   {
@@ -246,6 +293,8 @@ const classicGameBenchmarks: ClassicGameBenchmark[] = [
     trainMaps: 56,
     evalMaps: 20,
     demoClips: 220,
+    complexity: 3,
+    promptSensitivity: 4,
     targetInference: "bounce rules and destructible affordances",
   },
   {
@@ -254,6 +303,8 @@ const classicGameBenchmarks: ClassicGameBenchmark[] = [
     trainMaps: 64,
     evalMaps: 24,
     demoClips: 260,
+    complexity: 4,
+    promptSensitivity: 4,
     targetInference: "self-avoidance, collection order, and route planning",
   },
   {
@@ -262,6 +313,8 @@ const classicGameBenchmarks: ClassicGameBenchmark[] = [
     trainMaps: 72,
     evalMaps: 28,
     demoClips: 300,
+    complexity: 4,
+    promptSensitivity: 5,
     targetInference: "enemy avoidance and temporary power states",
   },
   {
@@ -270,6 +323,8 @@ const classicGameBenchmarks: ClassicGameBenchmark[] = [
     trainMaps: 60,
     evalMaps: 24,
     demoClips: 240,
+    complexity: 3,
+    promptSensitivity: 3,
     targetInference: "timing windows and moving hazards",
   },
   {
@@ -278,6 +333,8 @@ const classicGameBenchmarks: ClassicGameBenchmark[] = [
     trainMaps: 80,
     evalMaps: 32,
     demoClips: 320,
+    complexity: 5,
+    promptSensitivity: 5,
     targetInference: "irreversible moves and spatial dependencies",
   },
   {
@@ -286,6 +343,8 @@ const classicGameBenchmarks: ClassicGameBenchmark[] = [
     trainMaps: 64,
     evalMaps: 24,
     demoClips: 280,
+    complexity: 5,
+    promptSensitivity: 5,
     targetInference: "delayed effects, blast zones, and teammate safety",
   },
   {
@@ -294,6 +353,8 @@ const classicGameBenchmarks: ClassicGameBenchmark[] = [
     trainMaps: 56,
     evalMaps: 20,
     demoClips: 220,
+    complexity: 4,
+    promptSensitivity: 4,
     targetInference: "role assignment and cooperative rescue",
   },
   {
@@ -302,6 +363,8 @@ const classicGameBenchmarks: ClassicGameBenchmark[] = [
     trainMaps: 48,
     evalMaps: 16,
     demoClips: 180,
+    complexity: 3,
+    promptSensitivity: 2,
     targetInference: "placement conventions and long-term board control",
   },
   {
@@ -310,6 +373,8 @@ const classicGameBenchmarks: ClassicGameBenchmark[] = [
     trainMaps: 52,
     evalMaps: 20,
     demoClips: 210,
+    complexity: 3,
+    promptSensitivity: 3,
     targetInference: "cover use, projectile timing, and target priority",
   },
   {
@@ -318,6 +383,8 @@ const classicGameBenchmarks: ClassicGameBenchmark[] = [
     trainMaps: 56,
     evalMaps: 20,
     demoClips: 220,
+    complexity: 4,
+    promptSensitivity: 4,
     targetInference: "ladder, jump, barrel, and rescue affordances",
   },
   {
@@ -326,6 +393,8 @@ const classicGameBenchmarks: ClassicGameBenchmark[] = [
     trainMaps: 84,
     evalMaps: 32,
     demoClips: 360,
+    complexity: 5,
+    promptSensitivity: 5,
     targetInference: "keys, locks, trading, and ownership conventions",
   },
 ];
@@ -385,9 +454,13 @@ const initialRuns: Run[] = [
     familyId: "social",
     conditionId: "behavior",
     budgetId: "full",
+    gameName: "Dungeon Key Quest",
     agent: "VLM-Planner",
     seed: 19,
     batch: 160,
+    evaluator: "held-out transfer evaluator",
+    promptMargin: 18,
+    sampleEfficiency: 74,
     accuracy: 72,
     generalization: 68,
     ruleRecovery: 66,
@@ -399,9 +472,13 @@ const initialRuns: Run[] = [
     familyId: "causal",
     conditionId: "hybrid",
     budgetId: "failed",
+    gameName: "Bomb Maze",
     agent: "World-Model RL",
     seed: 11,
     batch: 240,
+    evaluator: "causal failure-demo evaluator",
+    promptMargin: 24,
+    sampleEfficiency: 78,
     accuracy: 81,
     generalization: 75,
     ruleRecovery: 86,
@@ -413,9 +490,13 @@ const initialRuns: Run[] = [
     familyId: "procedural",
     conditionId: "text",
     budgetId: "partial",
+    gameName: "Snake-like Growth",
     agent: "BC-Transformer",
     seed: 7,
     batch: 120,
+    evaluator: "procedural transfer evaluator",
+    promptMargin: 9,
+    sampleEfficiency: 66,
     accuracy: 69,
     generalization: 62,
     ruleRecovery: 58,
@@ -427,55 +508,193 @@ function clampMetric(value: number) {
   return Math.max(35, Math.min(96, Math.round(value)));
 }
 
+function clampScore(value: number, min = 0, max = 100) {
+  return Math.max(min, Math.min(max, Math.round(value)));
+}
+
+function stringHash(value: string) {
+  return Array.from(value).reduce(
+    (total, character) => total + character.charCodeAt(0),
+    0,
+  );
+}
+
+function getBenchmarkGame(gameName: string) {
+  return (
+    classicGameBenchmarks.find((game) => game.name === gameName) ??
+    classicGameBenchmarks[0]
+  );
+}
+
+function getAgentProfile(agent: string) {
+  return agentProfiles[agent] ?? agentProfiles["VLM-Planner"];
+}
+
 function estimateMetrics(
   familyId: FamilyId,
   conditionId: ConditionId,
   budgetId: BudgetId,
   seed: number,
   batch: number,
+  gameName = classicGameBenchmarks[0].name,
+  agent = agents[0],
 ): MetricSet {
+  const game = getBenchmarkGame(gameName);
+  const profile = getAgentProfile(agent);
   const conditionBoost: Record<ConditionId, number> = {
     none: 0,
-    text: 10,
-    behavior: 16,
-    hybrid: 22,
+    text: 5 + profile.languageSkill * 2,
+    behavior: 7 + profile.behaviorSkill * 2 + game.promptSensitivity,
+    hybrid:
+      11 +
+      profile.languageSkill +
+      profile.behaviorSkill +
+      game.promptSensitivity,
   };
   const budgetBoost: Record<BudgetId, number> = {
-    one: 3,
-    partial: 8,
-    full: 14,
-    multi: 18,
-    failed: 9,
+    one: 2 + profile.sampleEfficiency,
+    partial: 7 + profile.sampleEfficiency,
+    full: 13,
+    multi: 17,
+    failed: 8 + Math.max(profile.causalSkill, profile.behaviorSkill),
   };
-  const familyBias: Record<FamilyId, number> = {
-    procedural: 4,
-    causal: 0,
-    social: -3,
+  const familyFit: Record<FamilyId, number> = {
+    procedural: profile.behaviorSkill + profile.sampleEfficiency,
+    causal: profile.causalSkill * 2,
+    social: profile.socialSkill * 2 + profile.languageSkill,
   };
-  const noise = ((seed * 37 + batch * 11) % 15) - 7;
+  const familyPenalty: Record<FamilyId, number> = {
+    procedural: 0,
+    causal: 3,
+    social: 5,
+  };
+  const batchBonus = clampScore((batch - 40) / 45, 0, 8);
+  const complexityPenalty =
+    game.complexity * 2 + Math.max(0, game.familyIds.length - 1) * 2;
+  const supportedFamilyBonus = game.familyIds.includes(familyId) ? 4 : -5;
+  const noise = ((seed * 37 + batch * 11 + stringHash(game.name)) % 15) - 7;
   const base =
-    51 +
+    47 +
     conditionBoost[conditionId] +
     budgetBoost[budgetId] +
-    familyBias[familyId] +
+    familyFit[familyId] +
+    batchBonus +
+    supportedFamilyBonus -
+    complexityPenalty -
+    familyPenalty[familyId] +
     noise;
 
   const behaviorSignal =
-    conditionId === "behavior" || conditionId === "hybrid" ? 8 : -4;
-  const failedDemoSignal = budgetId === "failed" ? 7 : 0;
+    conditionId === "behavior" || conditionId === "hybrid"
+      ? 7 + game.promptSensitivity
+      : -3;
+  const failedDemoSignal =
+    budgetId === "failed" ? 4 + profile.causalSkill + game.promptSensitivity : 0;
   const socialSignal =
-    familyId === "social" && conditionId !== "none" ? 9 : familyId === "social" ? -5 : 0;
+    familyId === "social" && conditionId !== "none"
+      ? profile.socialSkill * 2 + game.promptSensitivity
+      : familyId === "social"
+        ? -7
+        : 0;
+  const causalSignal =
+    familyId === "causal" ? profile.causalSkill * 2 + failedDemoSignal : 0;
 
   return {
     accuracy: clampMetric(base),
     generalization: clampMetric(base - 5 + behaviorSignal),
-    ruleRecovery: clampMetric(base - 9 + behaviorSignal + failedDemoSignal),
+    ruleRecovery: clampMetric(base - 10 + behaviorSignal + causalSignal),
     social: clampMetric(base - 7 + socialSignal),
   };
 }
 
+function computePromptMargin(
+  familyId: FamilyId,
+  conditionId: ConditionId,
+  budgetId: BudgetId,
+  seed: number,
+  batch: number,
+  gameName: string,
+  agent: string,
+) {
+  const promptScore = estimateMetrics(
+    familyId,
+    conditionId,
+    budgetId,
+    seed,
+    batch,
+    gameName,
+    agent,
+  ).generalization;
+  const noPromptScore = estimateMetrics(
+    familyId,
+    "none",
+    budgetId,
+    seed,
+    batch,
+    gameName,
+    agent,
+  ).generalization;
+  return promptScore - noPromptScore;
+}
+
+function computeSampleEfficiency(
+  conditionId: ConditionId,
+  budgetId: BudgetId,
+  gameName: string,
+  agent: string,
+) {
+  const game = getBenchmarkGame(gameName);
+  const profile = getAgentProfile(agent);
+  const conditionFactor: Record<ConditionId, number> = {
+    none: -4,
+    text: profile.languageSkill,
+    behavior: profile.behaviorSkill + game.promptSensitivity,
+    hybrid: profile.languageSkill + profile.behaviorSkill + 2,
+  };
+  const budgetFactor: Record<BudgetId, number> = {
+    one: 3,
+    partial: 7,
+    full: 11,
+    multi: 13,
+    failed: 8,
+  };
+  return clampScore(
+    45 +
+      profile.sampleEfficiency * 5 +
+      conditionFactor[conditionId] +
+      budgetFactor[budgetId] -
+      game.complexity * 2,
+    20,
+    96,
+  );
+}
+
+function evaluatorLabel(familyId: FamilyId, budgetId: BudgetId) {
+  if (budgetId === "failed") return "counterfactual failure-demo evaluator";
+  if (familyId === "social") return "social transfer evaluator";
+  if (familyId === "causal") return "causal affordance evaluator";
+  return "procedural transfer evaluator";
+}
+
+function verdictLabel(promptMargin: number, metrics: MetricSet) {
+  if (promptMargin >= 18 && metrics.generalization >= 70) {
+    return "Strong behavior-prompt signal";
+  }
+  if (promptMargin >= 10) {
+    return "Promising behavior-prompt signal";
+  }
+  if (promptMargin >= 4) {
+    return "Weak but positive signal";
+  }
+  return "Needs stronger demonstrations";
+}
+
 function metricLabel(value: number) {
   return `${value}%`;
+}
+
+function signedLabel(value: number) {
+  return value > 0 ? `+${value}` : String(value);
 }
 
 function statusClass(status: RunStatus) {
@@ -527,6 +746,7 @@ function csvCell(value: string | number) {
 export default function Home() {
   const [activeTab, setActiveTab] = useState<TabId>("lab");
   const [familyId, setFamilyId] = useState<FamilyId>("procedural");
+  const [selectedGameName, setSelectedGameName] = useState("Snake-like Growth");
   const [conditionId, setConditionId] = useState<ConditionId>("behavior");
   const [budgetId, setBudgetId] = useState<BudgetId>("full");
   const [selectedAgent, setSelectedAgent] = useState(agents[1]);
@@ -540,6 +760,15 @@ export default function Home() {
     useState<ReadinessItem[]>(initialReadiness);
 
   const selectedFamily = taskFamilies.find((family) => family.id === familyId)!;
+  const compatibleGames = useMemo(
+    () =>
+      classicGameBenchmarks.filter((game) => game.familyIds.includes(familyId)),
+    [familyId],
+  );
+  const selectedGame =
+    compatibleGames.find((game) => game.name === selectedGameName) ??
+    compatibleGames[0] ??
+    classicGameBenchmarks[0];
   const selectedCondition =
     promptConditions.find((condition) => condition.id === conditionId)!;
   const selectedBudget = demoBudgets.find((budget) => budget.id === budgetId)!;
@@ -549,10 +778,59 @@ export default function Home() {
     [runs, selectedRunId],
   );
   const currentMetrics = useMemo(
-    () => estimateMetrics(familyId, conditionId, budgetId, seed, batchSize),
-    [familyId, conditionId, budgetId, seed, batchSize],
+    () =>
+      estimateMetrics(
+        familyId,
+        conditionId,
+        budgetId,
+        seed,
+        batchSize,
+        selectedGame.name,
+        selectedAgent,
+      ),
+    [
+      familyId,
+      conditionId,
+      budgetId,
+      seed,
+      batchSize,
+      selectedGame.name,
+      selectedAgent,
+    ],
   );
   const displayedMetrics = selectedRun ?? currentMetrics;
+  const currentPromptMargin = useMemo(
+    () =>
+      computePromptMargin(
+        familyId,
+        conditionId,
+        budgetId,
+        seed,
+        batchSize,
+        selectedGame.name,
+        selectedAgent,
+      ),
+    [
+      familyId,
+      conditionId,
+      budgetId,
+      seed,
+      batchSize,
+      selectedGame.name,
+      selectedAgent,
+    ],
+  );
+  const currentSampleEfficiency = useMemo(
+    () =>
+      computeSampleEfficiency(
+        conditionId,
+        budgetId,
+        selectedGame.name,
+        selectedAgent,
+      ),
+    [conditionId, budgetId, selectedGame.name, selectedAgent],
+  );
+  const currentVerdict = verdictLabel(currentPromptMargin, currentMetrics);
 
   const conditionComparison = promptConditions.map((condition) => ({
     ...condition,
@@ -562,14 +840,23 @@ export default function Home() {
       budgetId,
       seed + condition.label.length,
       batchSize,
+      selectedGame.name,
+      selectedAgent,
     ),
   }));
 
   const matrix = demoBudgets.map((budget) => ({
     ...budget,
     cells: promptConditions.map((condition) =>
-      estimateMetrics(familyId, condition.id, budget.id, seed, batchSize)
-        .generalization,
+      estimateMetrics(
+        familyId,
+        condition.id,
+        budget.id,
+        seed,
+        batchSize,
+        selectedGame.name,
+        selectedAgent,
+      ).generalization,
     ),
   }));
   const readinessSummary = useMemo(
@@ -588,6 +875,8 @@ export default function Home() {
       budgetId,
       seed,
       batchSize,
+      selectedGame.name,
+      selectedAgent,
     );
     const run: Run = {
       id,
@@ -595,14 +884,79 @@ export default function Home() {
       familyId,
       conditionId,
       budgetId,
+      gameName: selectedGame.name,
       agent: selectedAgent,
       seed,
       batch: batchSize,
+      evaluator: evaluatorLabel(familyId, budgetId),
+      promptMargin: computePromptMargin(
+        familyId,
+        conditionId,
+        budgetId,
+        seed,
+        batchSize,
+        selectedGame.name,
+        selectedAgent,
+      ),
+      sampleEfficiency: computeSampleEfficiency(
+        conditionId,
+        budgetId,
+        selectedGame.name,
+        selectedAgent,
+      ),
       ...metrics,
     };
     setRuns((previous) => [run, ...previous]);
     setSelectedRunId(id);
     setNextRunNumber((value) => value + 1);
+    setActiveTab("runs");
+  }
+
+  function queueAblationSet() {
+    const newRuns = promptConditions.map((condition, index) => {
+      const id = `run-${String(nextRunNumber + index).padStart(3, "0")}`;
+      const runSeed = seed + index;
+      const metrics = estimateMetrics(
+        familyId,
+        condition.id,
+        budgetId,
+        runSeed,
+        batchSize,
+        selectedGame.name,
+        selectedAgent,
+      );
+      return {
+        id,
+        status: "queued" as RunStatus,
+        familyId,
+        conditionId: condition.id,
+        budgetId,
+        gameName: selectedGame.name,
+        agent: selectedAgent,
+        seed: runSeed,
+        batch: batchSize,
+        evaluator: evaluatorLabel(familyId, budgetId),
+        promptMargin: computePromptMargin(
+          familyId,
+          condition.id,
+          budgetId,
+          runSeed,
+          batchSize,
+          selectedGame.name,
+          selectedAgent,
+        ),
+        sampleEfficiency: computeSampleEfficiency(
+          condition.id,
+          budgetId,
+          selectedGame.name,
+          selectedAgent,
+        ),
+        ...metrics,
+      };
+    });
+    setRuns((previous) => [...newRuns, ...previous]);
+    setSelectedRunId(newRuns[0].id);
+    setNextRunNumber((value) => value + newRuns.length);
     setActiveTab("runs");
   }
 
@@ -638,11 +992,16 @@ export default function Home() {
       exportedAt: new Date().toISOString(),
       selectedExperiment: {
         familyId,
+        gameName: selectedGame.name,
         conditionId,
         budgetId,
         agent: selectedAgent,
         seed,
         batchSize,
+        evaluator: evaluatorLabel(familyId, budgetId),
+        promptMargin: currentPromptMargin,
+        sampleEfficiency: currentSampleEfficiency,
+        verdict: currentVerdict,
       },
       totals: classicTotals,
       promptConditions,
@@ -675,11 +1034,15 @@ export default function Home() {
       "run_id",
       "status",
       "family",
+      "game",
       "condition",
       "budget",
       "agent",
       "seed",
       "batch",
+      "evaluator",
+      "prompt_margin",
+      "sample_efficiency",
       "accuracy",
       "generalization",
       "rule_recovery",
@@ -695,11 +1058,15 @@ export default function Home() {
         run.id,
         run.status,
         family?.label ?? run.familyId,
+        run.gameName,
         condition?.label ?? run.conditionId,
         budget?.label ?? run.budgetId,
         run.agent,
         run.seed,
         run.batch,
+        run.evaluator,
+        run.promptMargin,
+        run.sampleEfficiency,
         run.accuracy,
         run.generalization,
         run.ruleRecovery,
@@ -796,6 +1163,12 @@ export default function Home() {
                       onClick={() => {
                         setFamilyId(family.id);
                         setPlayhead(2);
+                        const firstCompatibleGame = classicGameBenchmarks.find(
+                          (game) => game.familyIds.includes(family.id),
+                        );
+                        if (firstCompatibleGame) {
+                          setSelectedGameName(firstCompatibleGame.name);
+                        }
                       }}
                       className={`rounded-md border p-3 text-left transition ${
                         familyId === family.id
@@ -811,6 +1184,30 @@ export default function Home() {
                       </span>
                     </button>
                   ))}
+                </div>
+              </ControlGroup>
+
+              <ControlGroup title="Classic game template">
+                <select
+                  value={selectedGame.name}
+                  onChange={(event) => setSelectedGameName(event.target.value)}
+                  className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-900"
+                >
+                  {compatibleGames.map((game) => (
+                    <option key={game.name} value={game.name}>
+                      {game.name}
+                    </option>
+                  ))}
+                </select>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <MiniStat
+                    label="Complexity"
+                    value={`${selectedGame.complexity}/5`}
+                  />
+                  <MiniStat
+                    label="Sensitivity"
+                    value={`${selectedGame.promptSensitivity}/5`}
+                  />
                 </div>
               </ControlGroup>
 
@@ -896,6 +1293,13 @@ export default function Home() {
                 className="mt-4 w-full rounded-md bg-zinc-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800"
               >
                 Queue Experiment
+              </button>
+              <button
+                type="button"
+                onClick={queueAblationSet}
+                className="mt-2 w-full rounded-md border border-zinc-300 px-4 py-3 text-sm font-semibold hover:border-zinc-600"
+              >
+                Queue 4-Way Ablation
               </button>
               <div className="mt-2 grid grid-cols-2 gap-2">
                 <button
@@ -1014,6 +1418,13 @@ export default function Home() {
                       <MiniStat label="Budget" value={selectedBudget.short} />
                       <MiniStat label="Agent" value={selectedAgent} />
                     </div>
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      <MiniStat label="Game" value={selectedGame.name} />
+                      <MiniStat
+                        label="Evaluator"
+                        value={evaluatorLabel(familyId, budgetId)}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1055,13 +1466,33 @@ export default function Home() {
                   )}
                 />
               </div>
+
+              <div className="mt-6 rounded-lg border border-zinc-200 p-4">
+                <h3 className="text-sm font-semibold">Evaluator Verdict</h3>
+                <p className="mt-3 text-sm font-semibold">{currentVerdict}</p>
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <MiniStat
+                    label="Prompt margin"
+                    value={signedLabel(currentPromptMargin)}
+                  />
+                  <MiniStat
+                    label="Sample efficiency"
+                    value={`${currentSampleEfficiency}%`}
+                  />
+                </div>
+                <p className="mt-3 text-xs leading-5 text-zinc-500">
+                  Margin compares the selected prompt condition against
+                  no-prompt transfer for the same game, agent, seed, and demo
+                  budget.
+                </p>
+              </div>
             </section>
           </div>
         )}
 
         {activeTab === "runs" && (
-          <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-            <section className="rounded-lg border border-zinc-200 bg-white p-4">
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <section className="min-w-0 rounded-lg border border-zinc-200 bg-white p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <h2 className="text-base font-semibold">Run Queue</h2>
                 <div className="flex flex-wrap gap-2">
@@ -1104,16 +1535,18 @@ export default function Home() {
               </div>
 
               <div className="mt-4 overflow-x-auto">
-                <table className="w-full min-w-[760px] border-collapse text-left text-sm">
+                <table className="w-full min-w-[980px] border-collapse text-left text-sm">
                   <thead>
                     <tr className="border-b border-zinc-200 text-xs uppercase tracking-[0.12em] text-zinc-500">
                       <th className="py-3 pr-4 font-semibold">Run</th>
                       <th className="py-3 pr-4 font-semibold">Status</th>
+                      <th className="py-3 pr-4 font-semibold">Game</th>
                       <th className="py-3 pr-4 font-semibold">Family</th>
                       <th className="py-3 pr-4 font-semibold">Prompt</th>
                       <th className="py-3 pr-4 font-semibold">Agent</th>
                       <th className="py-3 pr-4 font-semibold">Accuracy</th>
                       <th className="py-3 pr-4 font-semibold">Transfer</th>
+                      <th className="py-3 pr-4 font-semibold">Margin</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1145,6 +1578,7 @@ export default function Home() {
                               {run.status}
                             </span>
                           </td>
+                          <td className="py-3 pr-4">{run.gameName}</td>
                           <td className="py-3 pr-4">{family.label}</td>
                           <td className="py-3 pr-4">{condition.label}</td>
                           <td className="py-3 pr-4">{run.agent}</td>
@@ -1153,6 +1587,9 @@ export default function Home() {
                           </td>
                           <td className="py-3 pr-4">
                             {metricLabel(run.generalization)}
+                          </td>
+                          <td className="py-3 pr-4">
+                            {signedLabel(run.promptMargin)}
                           </td>
                         </tr>
                       );
@@ -1167,11 +1604,23 @@ export default function Home() {
               {selectedRun ? (
                 <div className="mt-4 space-y-4">
                   <MiniStat label="Run" value={selectedRun.id} />
+                  <MiniStat label="Game" value={selectedRun.gameName} />
                   <MiniStat label="Agent" value={selectedRun.agent} />
                   <MiniStat
                     label="Seed / batch"
                     value={`${selectedRun.seed} / ${selectedRun.batch}`}
                   />
+                  <MiniStat label="Evaluator" value={selectedRun.evaluator} />
+                  <div className="grid grid-cols-2 gap-2">
+                    <MiniStat
+                      label="Prompt margin"
+                      value={signedLabel(selectedRun.promptMargin)}
+                    />
+                    <MiniStat
+                      label="Efficiency"
+                      value={`${selectedRun.sampleEfficiency}%`}
+                    />
+                  </div>
                   <BarRow label="Inference" value={selectedRun.accuracy} active />
                   <BarRow
                     label="Transfer"
@@ -1215,6 +1664,8 @@ export default function Home() {
                           budgetId,
                           seed,
                           batchSize,
+                          selectedGame.name,
+                          selectedAgent,
                         ).generalization;
                   return (
                     <BarRow
@@ -1291,7 +1742,7 @@ export default function Home() {
                 </span>
               </div>
               <div className="mt-4 overflow-x-auto">
-                <table className="w-full min-w-[860px] border-collapse text-left text-sm">
+                <table className="w-full min-w-[980px] border-collapse text-left text-sm">
                   <thead>
                     <tr className="border-b border-zinc-200 text-xs uppercase tracking-[0.12em] text-zinc-500">
                       <th className="py-3 pr-4 font-semibold">Classic game</th>
@@ -1299,6 +1750,8 @@ export default function Home() {
                       <th className="py-3 pr-4 font-semibold">Train</th>
                       <th className="py-3 pr-4 font-semibold">Held-out</th>
                       <th className="py-3 pr-4 font-semibold">Demos</th>
+                      <th className="py-3 pr-4 font-semibold">Complexity</th>
+                      <th className="py-3 pr-4 font-semibold">Sensitivity</th>
                       <th className="py-3 pr-4 font-semibold">
                         Target inference
                       </th>
@@ -1325,6 +1778,10 @@ export default function Home() {
                         </td>
                         <td className="py-3 pr-4">
                           {game.demoClips.toLocaleString()}
+                        </td>
+                        <td className="py-3 pr-4">{game.complexity}/5</td>
+                        <td className="py-3 pr-4">
+                          {game.promptSensitivity}/5
                         </td>
                         <td className="py-3 pr-4 text-zinc-600">
                           {game.targetInference}
