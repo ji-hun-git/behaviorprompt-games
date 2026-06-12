@@ -49,6 +49,25 @@ type TaskFamily = {
   };
 };
 
+type ClassicGameBenchmark = {
+  name: string;
+  familyIds: FamilyId[];
+  trainMaps: number;
+  evalMaps: number;
+  demoClips: number;
+  targetInference: string;
+};
+
+type ReadinessStatus = "planned" | "building" | "ready";
+
+type ReadinessItem = {
+  id: string;
+  label: string;
+  owner: string;
+  status: ReadinessStatus;
+  detail: string;
+};
+
 const worldIndexes = Array.from({ length: 49 }, (_, index) => index);
 
 const taskFamilies: TaskFamily[] = [
@@ -212,6 +231,153 @@ const demoBudgets: Array<{
 
 const agents = ["BC-Transformer", "VLM-Planner", "World-Model RL", "GameGPT-Agent"];
 
+const classicGameBenchmarks: ClassicGameBenchmark[] = [
+  {
+    name: "Pong-like Rally",
+    familyIds: ["procedural"],
+    trainMaps: 40,
+    evalMaps: 16,
+    demoClips: 180,
+    targetInference: "turn-taking, pursuit, and defensive positioning",
+  },
+  {
+    name: "Breakout-like Bricks",
+    familyIds: ["causal"],
+    trainMaps: 56,
+    evalMaps: 20,
+    demoClips: 220,
+    targetInference: "bounce rules and destructible affordances",
+  },
+  {
+    name: "Snake-like Growth",
+    familyIds: ["procedural"],
+    trainMaps: 64,
+    evalMaps: 24,
+    demoClips: 260,
+    targetInference: "self-avoidance, collection order, and route planning",
+  },
+  {
+    name: "Maze Chase",
+    familyIds: ["causal"],
+    trainMaps: 72,
+    evalMaps: 28,
+    demoClips: 300,
+    targetInference: "enemy avoidance and temporary power states",
+  },
+  {
+    name: "Road Crossing",
+    familyIds: ["causal"],
+    trainMaps: 60,
+    evalMaps: 24,
+    demoClips: 240,
+    targetInference: "timing windows and moving hazards",
+  },
+  {
+    name: "Crate Pusher",
+    familyIds: ["procedural", "causal"],
+    trainMaps: 80,
+    evalMaps: 32,
+    demoClips: 320,
+    targetInference: "irreversible moves and spatial dependencies",
+  },
+  {
+    name: "Bomb Maze",
+    familyIds: ["causal", "social"],
+    trainMaps: 64,
+    evalMaps: 24,
+    demoClips: 280,
+    targetInference: "delayed effects, blast zones, and teammate safety",
+  },
+  {
+    name: "Builder Swarm",
+    familyIds: ["causal", "social"],
+    trainMaps: 56,
+    evalMaps: 20,
+    demoClips: 220,
+    targetInference: "role assignment and cooperative rescue",
+  },
+  {
+    name: "Falling Blocks",
+    familyIds: ["procedural"],
+    trainMaps: 48,
+    evalMaps: 16,
+    demoClips: 180,
+    targetInference: "placement conventions and long-term board control",
+  },
+  {
+    name: "Invader Defense",
+    familyIds: ["procedural", "causal"],
+    trainMaps: 52,
+    evalMaps: 20,
+    demoClips: 210,
+    targetInference: "cover use, projectile timing, and target priority",
+  },
+  {
+    name: "Platform Rescue",
+    familyIds: ["causal"],
+    trainMaps: 56,
+    evalMaps: 20,
+    demoClips: 220,
+    targetInference: "ladder, jump, barrel, and rescue affordances",
+  },
+  {
+    name: "Dungeon Key Quest",
+    familyIds: ["procedural", "social"],
+    trainMaps: 84,
+    evalMaps: 32,
+    demoClips: 360,
+    targetInference: "keys, locks, trading, and ownership conventions",
+  },
+];
+
+const classicTotals = classicGameBenchmarks.reduce(
+  (totals, game) => ({
+    games: totals.games + 1,
+    levels: totals.levels + game.trainMaps + game.evalMaps,
+    heldOut: totals.heldOut + game.evalMaps,
+    demos: totals.demos + game.demoClips,
+  }),
+  { games: 0, levels: 0, heldOut: 0, demos: 0 },
+);
+
+const initialReadiness: ReadinessItem[] = [
+  {
+    id: "envs",
+    label: "Game environments",
+    owner: "Benchmark",
+    status: "building",
+    detail: "Grid-world prototypes for procedural, causal, and social tasks.",
+  },
+  {
+    id: "demos",
+    label: "Behavior demos",
+    owner: "Data",
+    status: "planned",
+    detail: "Trajectory schema, success clips, partial clips, and failed clips.",
+  },
+  {
+    id: "agents",
+    label: "Agent adapters",
+    owner: "Evaluation",
+    status: "planned",
+    detail: "Adapters for VLM planners, imitation baselines, and RL agents.",
+  },
+  {
+    id: "metrics",
+    label: "Metrics",
+    owner: "Analysis",
+    status: "building",
+    detail: "Goal completion, transfer, rule recovery, and norm compliance.",
+  },
+  {
+    id: "paper",
+    label: "Paper positioning",
+    owner: "Writing",
+    status: "ready",
+    detail: "Claim benchmark contribution, not invention of demonstrations.",
+  },
+];
+
 const initialRuns: Run[] = [
   {
     id: "run-003",
@@ -325,6 +491,39 @@ function statusClass(status: RunStatus) {
   }
 }
 
+function readinessClass(status: ReadinessStatus) {
+  switch (status) {
+    case "ready":
+      return "border-emerald-200 bg-emerald-50 text-emerald-800";
+    case "building":
+      return "border-amber-200 bg-amber-50 text-amber-800";
+    default:
+      return "border-zinc-200 bg-zinc-50 text-zinc-700";
+  }
+}
+
+function nextReadinessStatus(status: ReadinessStatus): ReadinessStatus {
+  if (status === "planned") return "building";
+  if (status === "building") return "ready";
+  return "planned";
+}
+
+function downloadText(filename: string, mimeType: string, text: string) {
+  const blob = new Blob([text], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function csvCell(value: string | number) {
+  return `"${String(value).replaceAll('"', '""')}"`;
+}
+
 export default function Home() {
   const [activeTab, setActiveTab] = useState<TabId>("lab");
   const [familyId, setFamilyId] = useState<FamilyId>("procedural");
@@ -337,6 +536,8 @@ export default function Home() {
   const [runs, setRuns] = useState<Run[]>(initialRuns);
   const [selectedRunId, setSelectedRunId] = useState(initialRuns[0].id);
   const [nextRunNumber, setNextRunNumber] = useState(4);
+  const [readiness, setReadiness] =
+    useState<ReadinessItem[]>(initialReadiness);
 
   const selectedFamily = taskFamilies.find((family) => family.id === familyId)!;
   const selectedCondition =
@@ -371,6 +572,13 @@ export default function Home() {
         .generalization,
     ),
   }));
+  const readinessSummary = useMemo(
+    () => ({
+      ready: readiness.filter((item) => item.status === "ready").length,
+      total: readiness.length,
+    }),
+    [readiness],
+  );
 
   function queueRun() {
     const id = `run-${String(nextRunNumber).padStart(3, "0")}`;
@@ -412,6 +620,99 @@ export default function Home() {
     const remaining = runs.filter((run) => run.id !== selectedRun.id);
     setRuns(remaining);
     setSelectedRunId(remaining[0]?.id ?? "");
+  }
+
+  function cycleReadiness(id: string) {
+    setReadiness((previous) =>
+      previous.map((item) =>
+        item.id === id
+          ? { ...item, status: nextReadinessStatus(item.status) }
+          : item,
+      ),
+    );
+  }
+
+  function exportBenchmarkJson() {
+    const manifest = {
+      name: "BehaviorPrompt Games",
+      exportedAt: new Date().toISOString(),
+      selectedExperiment: {
+        familyId,
+        conditionId,
+        budgetId,
+        agent: selectedAgent,
+        seed,
+        batchSize,
+      },
+      totals: classicTotals,
+      promptConditions,
+      demoBudgets,
+      taskFamilies: taskFamilies.map((family) => ({
+        id: family.id,
+        label: family.label,
+        shorthand: family.shorthand,
+        focus: family.focus,
+        transfer: family.transfer,
+        objects: family.objects,
+        blockers: family.blockers,
+        hazard: family.hazard,
+        path: family.path,
+        events: family.events,
+      })),
+      classicGameBenchmarks,
+      readiness,
+      runs,
+    };
+    downloadText(
+      "behaviorprompt-benchmark-manifest.json",
+      "application/json",
+      JSON.stringify(manifest, null, 2),
+    );
+  }
+
+  function exportRunsCsv() {
+    const headers = [
+      "run_id",
+      "status",
+      "family",
+      "condition",
+      "budget",
+      "agent",
+      "seed",
+      "batch",
+      "accuracy",
+      "generalization",
+      "rule_recovery",
+      "social",
+    ];
+    const rows = runs.map((run) => {
+      const family = taskFamilies.find((item) => item.id === run.familyId);
+      const condition = promptConditions.find(
+        (item) => item.id === run.conditionId,
+      );
+      const budget = demoBudgets.find((item) => item.id === run.budgetId);
+      return [
+        run.id,
+        run.status,
+        family?.label ?? run.familyId,
+        condition?.label ?? run.conditionId,
+        budget?.label ?? run.budgetId,
+        run.agent,
+        run.seed,
+        run.batch,
+        run.accuracy,
+        run.generalization,
+        run.ruleRecovery,
+        run.social,
+      ]
+        .map(csvCell)
+        .join(",");
+    });
+    downloadText(
+      "behaviorprompt-runs.csv",
+      "text/csv",
+      [headers.join(","), ...rows].join("\n"),
+    );
   }
 
   return (
@@ -462,6 +763,10 @@ export default function Home() {
             value={displayedMetrics.ruleRecovery}
           />
           <MetricTile label="Social alignment" value={displayedMetrics.social} />
+          <CountTile label="Classic games" value={classicTotals.games} />
+          <CountTile label="Generated levels" value={classicTotals.levels} />
+          <CountTile label="Held-out levels" value={classicTotals.heldOut} />
+          <CountTile label="Demo clips" value={classicTotals.demos} />
         </div>
       </section>
 
@@ -592,6 +897,22 @@ export default function Home() {
               >
                 Queue Experiment
               </button>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={exportBenchmarkJson}
+                  className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium hover:border-zinc-600"
+                >
+                  Export JSON
+                </button>
+                <button
+                  type="button"
+                  onClick={exportRunsCsv}
+                  className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium hover:border-zinc-600"
+                >
+                  Export CSV
+                </button>
+              </div>
             </section>
 
             <section className="rounded-lg border border-zinc-200 bg-white p-4">
@@ -772,6 +1093,13 @@ export default function Home() {
                   >
                     Archive
                   </button>
+                  <button
+                    type="button"
+                    onClick={exportRunsCsv}
+                    className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium hover:border-zinc-600"
+                  >
+                    Export CSV
+                  </button>
                 </div>
               </div>
 
@@ -905,6 +1233,13 @@ export default function Home() {
               <div className="mt-4 grid gap-3">
                 {taskFamilies.map((family) => {
                   const familyRuns = runs.filter((run) => run.familyId === family.id);
+                  const familyGames = classicGameBenchmarks.filter((game) =>
+                    game.familyIds.includes(family.id),
+                  );
+                  const familyLevels = familyGames.reduce(
+                    (total, game) => total + game.trainMaps + game.evalMaps,
+                    0,
+                  );
                   return (
                     <div
                       key={family.id}
@@ -923,9 +1258,81 @@ export default function Home() {
                           {familyRuns.length} runs
                         </span>
                       </div>
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        <MiniStat
+                          label="Classic games"
+                          value={String(familyGames.length)}
+                        />
+                        <MiniStat
+                          label="Game levels"
+                          value={familyLevels.toLocaleString()}
+                        />
+                      </div>
                     </div>
                   );
                 })}
+              </div>
+            </section>
+
+            <section className="rounded-lg border border-zinc-200 bg-white p-4 lg:col-span-2">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-base font-semibold">
+                    Classic Game Numbers
+                  </h2>
+                  <p className="mt-1 text-sm text-zinc-500">
+                    Classic-inspired tasks act as familiar priors while keeping
+                    the benchmark procedurally controlled.
+                  </p>
+                </div>
+                <span className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm font-semibold">
+                  {classicTotals.games} games /{" "}
+                  {classicTotals.levels.toLocaleString()} levels
+                </span>
+              </div>
+              <div className="mt-4 overflow-x-auto">
+                <table className="w-full min-w-[860px] border-collapse text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-zinc-200 text-xs uppercase tracking-[0.12em] text-zinc-500">
+                      <th className="py-3 pr-4 font-semibold">Classic game</th>
+                      <th className="py-3 pr-4 font-semibold">Families</th>
+                      <th className="py-3 pr-4 font-semibold">Train</th>
+                      <th className="py-3 pr-4 font-semibold">Held-out</th>
+                      <th className="py-3 pr-4 font-semibold">Demos</th>
+                      <th className="py-3 pr-4 font-semibold">
+                        Target inference
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {classicGameBenchmarks.map((game) => (
+                      <tr key={game.name} className="border-b border-zinc-100">
+                        <td className="py-3 pr-4 font-semibold">{game.name}</td>
+                        <td className="py-3 pr-4">
+                          {game.familyIds
+                            .map(
+                              (id) =>
+                                taskFamilies.find((family) => family.id === id)
+                                  ?.label,
+                            )
+                            .join(", ")}
+                        </td>
+                        <td className="py-3 pr-4">
+                          {game.trainMaps.toLocaleString()}
+                        </td>
+                        <td className="py-3 pr-4">
+                          {game.evalMaps.toLocaleString()}
+                        </td>
+                        <td className="py-3 pr-4">
+                          {game.demoClips.toLocaleString()}
+                        </td>
+                        <td className="py-3 pr-4 text-zinc-600">
+                          {game.targetInference}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </section>
 
@@ -956,6 +1363,79 @@ export default function Home() {
 
         {activeTab === "protocol" && (
           <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
+            <section className="rounded-lg border border-zinc-200 bg-white p-4 lg:col-span-2">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-base font-semibold">Research Readiness</h2>
+                  <p className="mt-1 text-sm text-zinc-500">
+                    {readinessSummary.ready} of {readinessSummary.total} tracks
+                    marked ready
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={exportBenchmarkJson}
+                  className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium hover:border-zinc-600"
+                >
+                  Export Manifest
+                </button>
+              </div>
+              <div className="mt-4 grid gap-3 md:grid-cols-5">
+                {readiness.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => cycleReadiness(item.id)}
+                    className={`rounded-lg border p-4 text-left transition hover:border-zinc-500 ${readinessClass(
+                      item.status,
+                    )}`}
+                  >
+                    <span className="block text-xs font-semibold uppercase tracking-[0.12em]">
+                      {item.status}
+                    </span>
+                    <span className="mt-2 block text-sm font-semibold">
+                      {item.label}
+                    </span>
+                    <span className="mt-1 block text-xs">{item.owner}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            <section className="rounded-lg border border-zinc-200 bg-white p-4">
+              <h2 className="text-base font-semibold">Positioning Guardrails</h2>
+              <div className="mt-4 space-y-3">
+                {[
+                  [
+                    "Claim",
+                    "Behavior trajectories are prompt inputs for game agents.",
+                  ],
+                  [
+                    "Contribution",
+                    "A controlled benchmark comparing no prompt, text, behavior, and hybrid prompts.",
+                  ],
+                  [
+                    "Do not claim",
+                    "That demonstrations, imitation learning, or in-context policy adaptation are new.",
+                  ],
+                  [
+                    "Novel edge",
+                    "Failed demos, demo sufficiency, and social conventions under behavior-only prompting.",
+                  ],
+                ].map(([label, value]) => (
+                  <div
+                    key={label}
+                    className="rounded-lg border border-zinc-200 bg-zinc-50 p-3"
+                  >
+                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-zinc-500">
+                      {label}
+                    </p>
+                    <p className="mt-2 text-sm text-zinc-700">{value}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
             <section className="rounded-lg border border-zinc-200 bg-white p-4">
               <h2 className="text-base font-semibold">Benchmark Protocol</h2>
               <div className="mt-4 space-y-3">
@@ -1011,6 +1491,17 @@ function MetricTile({ label, value }: { label: string; value: number }) {
     <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
       <p className="text-sm font-medium text-zinc-500">{label}</p>
       <p className="mt-2 text-3xl font-semibold">{metricLabel(value)}</p>
+    </div>
+  );
+}
+
+function CountTile({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-lg border border-zinc-200 bg-white p-4">
+      <p className="text-sm font-medium text-zinc-500">{label}</p>
+      <p className="mt-2 text-3xl font-semibold">
+        {value.toLocaleString()}
+      </p>
     </div>
   );
 }
