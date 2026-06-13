@@ -17,6 +17,8 @@ The first interface includes:
 - a visual grid-world behavior prompt player
 - simulated experiment queue management
 - JSON benchmark-manifest export and CSV run export
+- JSON trajectory trace export with actions, observations, rewards, inventory,
+  flags, and success/failure status
 - readiness tracking for environments, demos, agent adapters, metrics, and paper
   positioning
 - deterministic simulated evaluator using game complexity, prompt sensitivity,
@@ -117,6 +119,10 @@ CS/RL/POMDP environment templates:
 The dashboard currently uses a deterministic simulated evaluator for planning
 experiments. See [docs/evaluator-logic.md](docs/evaluator-logic.md) for the
 inputs, derived scores, and verdict rules.
+
+The Lab view also generates a concrete behavior trace for the selected task,
+benchmark template, prompt condition, and demo budget. Trace export is available
+as `behaviorprompt-trace.json`.
 
 ## Development
 

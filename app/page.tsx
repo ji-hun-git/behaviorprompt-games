@@ -73,6 +73,35 @@ type AgentProfile = {
   sampleEfficiency: number;
 };
 
+type TraceStatus = "success" | "failed" | "partial";
+
+type TraceStep = {
+  t: number;
+  cell: number;
+  row: number;
+  col: number;
+  action: string;
+  observation: string;
+  reward: number;
+  inventory: string[];
+  flags: string[];
+};
+
+type BehaviorTrace = {
+  id: string;
+  familyId: FamilyId;
+  gameName: string;
+  conditionId: ConditionId;
+  budgetId: BudgetId;
+  seed: number;
+  status: TraceStatus;
+  success: boolean;
+  totalReward: number;
+  inferredRule: string;
+  failureReason: string | null;
+  steps: TraceStep[];
+};
+
 type ReadinessStatus = "planned" | "building" | "ready";
 
 type ReadinessItem = {
@@ -966,6 +995,180 @@ function verdictLabel(promptMargin: number, metrics: MetricSet) {
   return "Needs stronger demonstrations";
 }
 
+function cellToCoord(cell: number) {
+  return {
+    row: Math.floor(cell / 7),
+    col: cell % 7,
+  };
+}
+
+function movementLabel(from: number, to: number) {
+  const delta = to - from;
+  if (delta === 1) return "move east";
+  if (delta === -1) return "move west";
+  if (delta === 7) return "move south";
+  if (delta === -7) return "move north";
+  return "jump";
+}
+
+function traceRuleLabel(familyId: FamilyId) {
+  if (familyId === "procedural") {
+    return "Satisfy prerequisite objects before crossing gated state tiles.";
+  }
+  if (familyId === "causal") {
+    return "Use interventions to change affordances before entering hazards.";
+  }
+  return "Resolve ownership or consent before using socially constrained objects.";
+}
+
+function failedPathForFamily(familyId: FamilyId) {
+  if (familyId === "procedural") return [0, 7, 14, 21, 20];
+  if (familyId === "causal") return [42, 43];
+  return [6, 13, 20, 27];
+}
+
+function pathForBudget(family: TaskFamily, budgetId: BudgetId) {
+  if (budgetId === "failed") return failedPathForFamily(family.id);
+  if (budgetId === "one") return family.path.slice(0, 2);
+  if (budgetId === "partial") {
+    return family.path.slice(0, Math.max(3, Math.ceil(family.path.length * 0.45)));
+  }
+  return family.path;
+}
+
+function simulateBehaviorTrace(
+  family: TaskFamily,
+  game: ClassicGameBenchmark,
+  conditionId: ConditionId,
+  budgetId: BudgetId,
+  seed: number,
+): BehaviorTrace {
+  const path = pathForBudget(family, budgetId);
+  const inventory: string[] = [];
+  const flags: string[] = [];
+  const steps: TraceStep[] = [];
+  let totalReward = 0;
+  let failed = false;
+  let failureReason: string | null = null;
+  let success = false;
+
+  path.forEach((cell, index) => {
+    const coord = cellToCoord(cell);
+    const object = family.objects[cell];
+    let reward = index === 0 ? 0 : -1;
+    let observation =
+      index === 0
+        ? `Spawned in ${game.name}.`
+        : `Entered cell ${coord.row},${coord.col}.`;
+    const action =
+      index === 0 ? "start" : movementLabel(path[index - 1], cell);
+
+    if (family.id === "procedural") {
+      if (object === "K" && !inventory.includes("key")) {
+        inventory.push("key");
+        reward += 5;
+        observation = "Collected key prerequisite.";
+      }
+      if (object === "D") {
+        if (inventory.includes("key")) {
+          flags.push("door-open");
+          reward += 5;
+          observation = "Opened gated door after collecting key.";
+        } else {
+          failed = true;
+          failureReason = "Reached locked door without key.";
+          reward -= 10;
+          observation = failureReason;
+        }
+      }
+      if (object === "G" && !failed) {
+        success = true;
+        reward += 20;
+        observation = "Reached goal after satisfying the prerequisite chain.";
+      }
+    }
+
+    if (family.id === "causal") {
+      if (object === "L" && !flags.includes("lever-on")) {
+        flags.push("lever-on");
+        reward += 6;
+        observation = "Activated causal lever.";
+      }
+      if (object === "B" && flags.includes("lever-on")) {
+        flags.push("bridge-active");
+        reward += 4;
+        observation = "Crossed bridge after intervention changed affordance.";
+      }
+      if (family.hazard.includes(cell) && !flags.includes("lever-on")) {
+        failed = true;
+        failureReason = "Entered hazard before changing the environment.";
+        reward -= 12;
+        observation = failureReason;
+      }
+      if (object === "G" && !failed) {
+        success = true;
+        reward += 20;
+        observation = "Reached goal after using the causal intervention.";
+      }
+    }
+
+    if (family.id === "social") {
+      if (object === "P" && !flags.includes("permission")) {
+        flags.push("permission");
+        reward += 6;
+        observation = "Received permission from partner.";
+      }
+      if (object === "C") {
+        if (flags.includes("permission")) {
+          reward += 4;
+          observation = "Opened chest after resolving ownership convention.";
+        } else {
+          failed = true;
+          failureReason = "Touched owned object before getting permission.";
+          reward -= 10;
+          observation = failureReason;
+        }
+      }
+      if (object === "G" && !failed) {
+        success = true;
+        reward += 20;
+        observation = "Exited while respecting the social convention.";
+      }
+    }
+
+    totalReward += reward;
+    steps.push({
+      t: index,
+      cell,
+      row: coord.row,
+      col: coord.col,
+      action,
+      observation,
+      reward,
+      inventory: [...inventory],
+      flags: [...flags],
+    });
+  });
+
+  const isTruncated = budgetId === "one" || budgetId === "partial";
+  const status: TraceStatus = failed ? "failed" : success ? "success" : "partial";
+
+  return {
+    id: `trace-${family.id}-${game.name.toLowerCase().replaceAll(" ", "-")}-${seed}`,
+    familyId: family.id,
+    gameName: game.name,
+    conditionId,
+    budgetId,
+    seed,
+    status: isTruncated && !failed ? "partial" : status,
+    success: success && !isTruncated,
+    totalReward,
+    inferredRule: traceRuleLabel(family.id),
+    failureReason,
+    steps,
+  };
+}
+
 function metricLabel(value: number) {
   return `${value}%`;
 }
@@ -1049,7 +1252,6 @@ export default function Home() {
   const selectedCondition =
     promptConditions.find((condition) => condition.id === conditionId)!;
   const selectedBudget = demoBudgets.find((budget) => budget.id === budgetId)!;
-  const safePlayhead = Math.min(playhead, selectedFamily.path.length - 1);
   const selectedRun = useMemo(
     () => runs.find((run) => run.id === selectedRunId) ?? runs[0] ?? null,
     [runs, selectedRunId],
@@ -1108,6 +1310,22 @@ export default function Home() {
     [conditionId, budgetId, selectedGame.name, selectedAgent],
   );
   const currentVerdict = verdictLabel(currentPromptMargin, currentMetrics);
+  const currentTrace = useMemo(
+    () =>
+      simulateBehaviorTrace(
+        selectedFamily,
+        selectedGame,
+        conditionId,
+        budgetId,
+        seed,
+      ),
+    [selectedFamily, selectedGame, conditionId, budgetId, seed],
+  );
+  const traceCells = currentTrace.steps.map((step) => step.cell);
+  const safeTracePlayhead = Math.min(
+    playhead,
+    Math.max(0, traceCells.length - 1),
+  );
 
   const conditionComparison = promptConditions.map((condition) => ({
     ...condition,
@@ -1297,6 +1515,7 @@ export default function Home() {
       })),
       classicGameBenchmarks,
       readiness,
+      currentTrace,
       runs,
     };
     downloadText(
@@ -1356,6 +1575,14 @@ export default function Home() {
       "behaviorprompt-runs.csv",
       "text/csv",
       [headers.join(","), ...rows].join("\n"),
+    );
+  }
+
+  function exportTraceJson() {
+    downloadText(
+      "behaviorprompt-trace.json",
+      "application/json",
+      JSON.stringify(currentTrace, null, 2),
     );
   }
 
@@ -1617,7 +1844,9 @@ export default function Home() {
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
-                    onClick={() => setPlayhead(Math.max(0, safePlayhead - 1))}
+                    onClick={() =>
+                      setPlayhead(Math.max(0, safeTracePlayhead - 1))
+                    }
                     className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium hover:border-zinc-600"
                   >
                     Prev Step
@@ -1626,7 +1855,7 @@ export default function Home() {
                     type="button"
                     onClick={() =>
                       setPlayhead(
-                        Math.min(selectedFamily.path.length - 1, safePlayhead + 1),
+                        Math.min(traceCells.length - 1, safeTracePlayhead + 1),
                       )
                     }
                     className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium hover:border-zinc-600"
@@ -1640,6 +1869,13 @@ export default function Home() {
                   >
                     Reset
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setPlayhead(traceCells.length - 1)}
+                    className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium hover:border-zinc-600"
+                  >
+                    Run Trace
+                  </button>
                 </div>
               </div>
 
@@ -1651,7 +1887,8 @@ export default function Home() {
                         key={`${selectedFamily.id}-${index}`}
                         index={index}
                         family={selectedFamily}
-                        playhead={safePlayhead}
+                        playhead={safeTracePlayhead}
+                        path={traceCells}
                       />
                     ))}
                   </div>
@@ -1668,7 +1905,7 @@ export default function Home() {
                     <div className="flex items-center justify-between gap-3">
                       <h3 className="text-sm font-semibold">Observed Event</h3>
                       <span className="text-xs font-medium text-zinc-500">
-                        Step {safePlayhead + 1} / {selectedFamily.path.length}
+                        Step {safeTracePlayhead + 1} / {currentTrace.steps.length}
                       </span>
                     </div>
                     <div className="mt-4 space-y-3">
@@ -1676,7 +1913,7 @@ export default function Home() {
                         <div
                           key={event.action}
                           className={`rounded-md border p-3 ${
-                            index <= Math.min(safePlayhead, selectedFamily.events.length - 1)
+                            index <= Math.min(safeTracePlayhead, selectedFamily.events.length - 1)
                               ? "border-zinc-300 bg-zinc-50"
                               : "border-zinc-100 bg-white text-zinc-400"
                           }`}
@@ -1709,6 +1946,59 @@ export default function Home() {
                         label="Evaluator"
                         value={evaluatorLabel(familyId, budgetId)}
                       />
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border border-zinc-200 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <h3 className="text-sm font-semibold">
+                        Trajectory Simulator
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={exportTraceJson}
+                        className="rounded-md border border-zinc-300 px-3 py-2 text-xs font-semibold hover:border-zinc-600"
+                      >
+                        Export Trace
+                      </button>
+                    </div>
+                    <div className="mt-4 grid grid-cols-3 gap-2">
+                      <MiniStat label="Status" value={currentTrace.status} />
+                      <MiniStat
+                        label="Steps"
+                        value={String(currentTrace.steps.length)}
+                      />
+                      <MiniStat
+                        label="Reward"
+                        value={String(currentTrace.totalReward)}
+                      />
+                    </div>
+                    <p className="mt-3 text-xs leading-5 text-zinc-500">
+                      {currentTrace.failureReason ?? currentTrace.inferredRule}
+                    </p>
+                    <div className="mt-3 max-h-48 space-y-2 overflow-y-auto pr-1">
+                      {currentTrace.steps.map((step) => (
+                        <div
+                          key={`${currentTrace.id}-${step.t}`}
+                          className={`rounded-md border p-2 text-xs ${
+                            step.t === safeTracePlayhead
+                              ? "border-zinc-900 bg-zinc-50"
+                              : "border-zinc-200"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-semibold">
+                              t{step.t}: {step.action}
+                            </span>
+                            <span className="text-zinc-500">
+                              r {step.reward}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-zinc-600">
+                            {step.observation}
+                          </p>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -2307,14 +2597,16 @@ function WorldCell({
   index,
   family,
   playhead,
+  path,
 }: {
   index: number;
   family: TaskFamily;
   playhead: number;
+  path: number[];
 }) {
-  const visiblePath = family.path.slice(0, playhead + 1);
+  const visiblePath = path.slice(0, playhead + 1);
   const isTrail = visiblePath.includes(index);
-  const isActive = family.path[playhead] === index;
+  const isActive = path[playhead] === index;
   const object = family.objects[index];
   const isBlocker = family.blockers.includes(index);
   const isHazard = family.hazard.includes(index);

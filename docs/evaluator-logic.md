@@ -61,6 +61,32 @@ The dashboard computes:
 Prompt margin is the selected prompt condition's transfer score minus no-prompt
 transfer under the same family, game, agent, seed, batch size, and demo budget.
 
+## Trajectory Simulation
+
+The Lab view also generates a concrete trace for the selected setup. A trace
+contains:
+
+- timestep
+- grid cell, row, and column
+- action label
+- observation text
+- reward delta
+- inventory
+- environment flags
+- success, failure, or partial status
+
+Demo budget changes the generated trace:
+
+- one action: only the first transition
+- partial trajectory: an early prefix of the successful path
+- full success: the complete successful path
+- multiple demos: currently represented by the full successful path for the
+  selected template
+- failed demo: a counterexample path that violates the relevant procedural,
+  causal, or social rule
+
+Trace export is deterministic and saved as `behaviorprompt-trace.json`.
+
 ## Verdicts
 
 The evaluator labels configurations as:
