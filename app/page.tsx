@@ -55,6 +55,7 @@ type TaskFamily = {
 
 type ClassicGameBenchmark = {
   name: string;
+  category: "classic" | "cs";
   familyIds: FamilyId[];
   trainMaps: number;
   evalMaps: number;
@@ -279,6 +280,7 @@ const agentProfiles: Record<string, AgentProfile> = {
 const classicGameBenchmarks: ClassicGameBenchmark[] = [
   {
     name: "Pong-like Rally",
+    category: "classic",
     familyIds: ["procedural"],
     trainMaps: 40,
     evalMaps: 16,
@@ -289,6 +291,7 @@ const classicGameBenchmarks: ClassicGameBenchmark[] = [
   },
   {
     name: "Breakout-like Bricks",
+    category: "classic",
     familyIds: ["causal"],
     trainMaps: 56,
     evalMaps: 20,
@@ -299,6 +302,7 @@ const classicGameBenchmarks: ClassicGameBenchmark[] = [
   },
   {
     name: "Snake-like Growth",
+    category: "classic",
     familyIds: ["procedural"],
     trainMaps: 64,
     evalMaps: 24,
@@ -309,6 +313,7 @@ const classicGameBenchmarks: ClassicGameBenchmark[] = [
   },
   {
     name: "Maze Chase",
+    category: "classic",
     familyIds: ["causal"],
     trainMaps: 72,
     evalMaps: 28,
@@ -319,6 +324,7 @@ const classicGameBenchmarks: ClassicGameBenchmark[] = [
   },
   {
     name: "Road Crossing",
+    category: "classic",
     familyIds: ["causal"],
     trainMaps: 60,
     evalMaps: 24,
@@ -329,6 +335,7 @@ const classicGameBenchmarks: ClassicGameBenchmark[] = [
   },
   {
     name: "Crate Pusher",
+    category: "classic",
     familyIds: ["procedural", "causal"],
     trainMaps: 80,
     evalMaps: 32,
@@ -339,6 +346,7 @@ const classicGameBenchmarks: ClassicGameBenchmark[] = [
   },
   {
     name: "Bomb Maze",
+    category: "classic",
     familyIds: ["causal", "social"],
     trainMaps: 64,
     evalMaps: 24,
@@ -349,6 +357,7 @@ const classicGameBenchmarks: ClassicGameBenchmark[] = [
   },
   {
     name: "Builder Swarm",
+    category: "classic",
     familyIds: ["causal", "social"],
     trainMaps: 56,
     evalMaps: 20,
@@ -359,6 +368,7 @@ const classicGameBenchmarks: ClassicGameBenchmark[] = [
   },
   {
     name: "Falling Blocks",
+    category: "classic",
     familyIds: ["procedural"],
     trainMaps: 48,
     evalMaps: 16,
@@ -369,6 +379,7 @@ const classicGameBenchmarks: ClassicGameBenchmark[] = [
   },
   {
     name: "Invader Defense",
+    category: "classic",
     familyIds: ["procedural", "causal"],
     trainMaps: 52,
     evalMaps: 20,
@@ -379,6 +390,7 @@ const classicGameBenchmarks: ClassicGameBenchmark[] = [
   },
   {
     name: "Platform Rescue",
+    category: "classic",
     familyIds: ["causal"],
     trainMaps: 56,
     evalMaps: 20,
@@ -389,6 +401,7 @@ const classicGameBenchmarks: ClassicGameBenchmark[] = [
   },
   {
     name: "Dungeon Key Quest",
+    category: "classic",
     familyIds: ["procedural", "social"],
     trainMaps: 84,
     evalMaps: 32,
@@ -397,16 +410,280 @@ const classicGameBenchmarks: ClassicGameBenchmark[] = [
     promptSensitivity: 5,
     targetInference: "keys, locks, trading, and ownership conventions",
   },
+  {
+    name: "Asteroid Field",
+    category: "classic",
+    familyIds: ["causal"],
+    trainMaps: 66,
+    evalMaps: 24,
+    demoClips: 250,
+    complexity: 4,
+    promptSensitivity: 4,
+    targetInference: "inertia, wraparound motion, and threat prioritization",
+  },
+  {
+    name: "Light Cycle Arena",
+    category: "classic",
+    familyIds: ["procedural", "social"],
+    trainMaps: 54,
+    evalMaps: 18,
+    demoClips: 210,
+    complexity: 4,
+    promptSensitivity: 4,
+    targetInference: "territory control, self-trapping, and opponent pressure",
+  },
+  {
+    name: "Missile Defense",
+    category: "classic",
+    familyIds: ["causal"],
+    trainMaps: 58,
+    evalMaps: 20,
+    demoClips: 220,
+    complexity: 3,
+    promptSensitivity: 3,
+    targetInference: "interception timing and limited defensive resources",
+  },
+  {
+    name: "River Route",
+    category: "classic",
+    familyIds: ["procedural", "causal"],
+    trainMaps: 62,
+    evalMaps: 22,
+    demoClips: 240,
+    complexity: 4,
+    promptSensitivity: 3,
+    targetInference: "fuel constraints, lane choice, and obstacle timing",
+  },
+  {
+    name: "Pyramid Hop",
+    category: "classic",
+    familyIds: ["procedural"],
+    trainMaps: 50,
+    evalMaps: 18,
+    demoClips: 190,
+    complexity: 3,
+    promptSensitivity: 4,
+    targetInference: "tile conversion order and enemy-safe traversal",
+  },
+  {
+    name: "Runner Heist",
+    category: "classic",
+    familyIds: ["procedural", "social"],
+    trainMaps: 70,
+    evalMaps: 26,
+    demoClips: 280,
+    complexity: 5,
+    promptSensitivity: 5,
+    targetInference: "digging timing, capture avoidance, and resource ownership",
+  },
+  {
+    name: "Boulder Mine",
+    category: "classic",
+    familyIds: ["causal"],
+    trainMaps: 72,
+    evalMaps: 28,
+    demoClips: 300,
+    complexity: 5,
+    promptSensitivity: 4,
+    targetInference: "falling-object causality and safe collection order",
+  },
+  {
+    name: "Pinball Control",
+    category: "classic",
+    familyIds: ["causal"],
+    trainMaps: 48,
+    evalMaps: 16,
+    demoClips: 180,
+    complexity: 4,
+    promptSensitivity: 3,
+    targetInference: "angle control, rebound prediction, and delayed payoff",
+  },
+  {
+    name: "Escort Shooter",
+    category: "classic",
+    familyIds: ["procedural", "social"],
+    trainMaps: 52,
+    evalMaps: 20,
+    demoClips: 210,
+    complexity: 4,
+    promptSensitivity: 4,
+    targetInference: "formation reading, target priority, and ally protection",
+  },
+  {
+    name: "Mini Golf Angle",
+    category: "classic",
+    familyIds: ["causal"],
+    trainMaps: 44,
+    evalMaps: 16,
+    demoClips: 170,
+    complexity: 3,
+    promptSensitivity: 3,
+    targetInference: "force selection, rebound planning, and hazard avoidance",
+  },
+  {
+    name: "RockSample POMDP",
+    category: "cs",
+    familyIds: ["causal"],
+    trainMaps: 96,
+    evalMaps: 36,
+    demoClips: 420,
+    complexity: 5,
+    promptSensitivity: 5,
+    targetInference: "information gathering, sensing value, and sample risk",
+  },
+  {
+    name: "Tiger POMDP",
+    category: "cs",
+    familyIds: ["causal"],
+    trainMaps: 48,
+    evalMaps: 18,
+    demoClips: 180,
+    complexity: 3,
+    promptSensitivity: 5,
+    targetInference: "listening before acting under hidden state uncertainty",
+  },
+  {
+    name: "Hallway POMDP",
+    category: "cs",
+    familyIds: ["procedural", "causal"],
+    trainMaps: 72,
+    evalMaps: 28,
+    demoClips: 300,
+    complexity: 4,
+    promptSensitivity: 5,
+    targetInference: "local observation aliasing and memory-dependent navigation",
+  },
+  {
+    name: "Wumpus World",
+    category: "cs",
+    familyIds: ["procedural", "causal"],
+    trainMaps: 80,
+    evalMaps: 32,
+    demoClips: 340,
+    complexity: 5,
+    promptSensitivity: 5,
+    targetInference: "logical hazard inference from breeze and stench cues",
+  },
+  {
+    name: "FrozenLake",
+    category: "cs",
+    familyIds: ["causal"],
+    trainMaps: 60,
+    evalMaps: 24,
+    demoClips: 240,
+    complexity: 3,
+    promptSensitivity: 4,
+    targetInference: "slippery dynamics and risk-aware route selection",
+  },
+  {
+    name: "Taxi MDP",
+    category: "cs",
+    familyIds: ["procedural", "causal"],
+    trainMaps: 72,
+    evalMaps: 28,
+    demoClips: 300,
+    complexity: 4,
+    promptSensitivity: 4,
+    targetInference: "pickup-dropoff ordering and wall-constrained navigation",
+  },
+  {
+    name: "Cliff Walking",
+    category: "cs",
+    familyIds: ["causal"],
+    trainMaps: 64,
+    evalMaps: 24,
+    demoClips: 260,
+    complexity: 4,
+    promptSensitivity: 4,
+    targetInference: "reward-risk tradeoff near catastrophic boundaries",
+  },
+  {
+    name: "Four Rooms Gridworld",
+    category: "cs",
+    familyIds: ["procedural"],
+    trainMaps: 76,
+    evalMaps: 28,
+    demoClips: 300,
+    complexity: 3,
+    promptSensitivity: 3,
+    targetInference: "subgoal discovery through bottleneck doorways",
+  },
+  {
+    name: "Mountain Car",
+    category: "cs",
+    familyIds: ["causal"],
+    trainMaps: 56,
+    evalMaps: 20,
+    demoClips: 220,
+    complexity: 4,
+    promptSensitivity: 3,
+    targetInference: "momentum accumulation and counterintuitive retreat",
+  },
+  {
+    name: "CartPole Balance",
+    category: "cs",
+    familyIds: ["causal"],
+    trainMaps: 52,
+    evalMaps: 20,
+    demoClips: 210,
+    complexity: 3,
+    promptSensitivity: 3,
+    targetInference: "stabilizing feedback from small corrective actions",
+  },
+  {
+    name: "Acrobot Swing-Up",
+    category: "cs",
+    familyIds: ["causal"],
+    trainMaps: 56,
+    evalMaps: 20,
+    demoClips: 220,
+    complexity: 4,
+    promptSensitivity: 3,
+    targetInference: "energy pumping and delayed control effects",
+  },
+  {
+    name: "Multi-Armed Bandit",
+    category: "cs",
+    familyIds: ["causal"],
+    trainMaps: 40,
+    evalMaps: 16,
+    demoClips: 160,
+    complexity: 2,
+    promptSensitivity: 4,
+    targetInference: "exploration-exploitation from reward observations",
+  },
+  {
+    name: "MiniGrid DoorKey",
+    category: "cs",
+    familyIds: ["procedural", "causal"],
+    trainMaps: 88,
+    evalMaps: 34,
+    demoClips: 380,
+    complexity: 4,
+    promptSensitivity: 5,
+    targetInference: "key-door dependency and compact symbolic affordances",
+  },
 ];
 
-const classicTotals = classicGameBenchmarks.reduce(
+const benchmarkTotals = classicGameBenchmarks.reduce(
   (totals, game) => ({
-    games: totals.games + 1,
+    templates: totals.templates + 1,
+    classicGames:
+      totals.classicGames + (game.category === "classic" ? 1 : 0),
+    csEnvironments:
+      totals.csEnvironments + (game.category === "cs" ? 1 : 0),
     levels: totals.levels + game.trainMaps + game.evalMaps,
     heldOut: totals.heldOut + game.evalMaps,
     demos: totals.demos + game.demoClips,
   }),
-  { games: 0, levels: 0, heldOut: 0, demos: 0 },
+  {
+    templates: 0,
+    classicGames: 0,
+    csEnvironments: 0,
+    levels: 0,
+    heldOut: 0,
+    demos: 0,
+  },
 );
 
 const initialReadiness: ReadinessItem[] = [
@@ -1003,7 +1280,7 @@ export default function Home() {
         sampleEfficiency: currentSampleEfficiency,
         verdict: currentVerdict,
       },
-      totals: classicTotals,
+      totals: benchmarkTotals,
       promptConditions,
       demoBudgets,
       taskFamilies: taskFamilies.map((family) => ({
@@ -1130,10 +1407,18 @@ export default function Home() {
             value={displayedMetrics.ruleRecovery}
           />
           <MetricTile label="Social alignment" value={displayedMetrics.social} />
-          <CountTile label="Classic games" value={classicTotals.games} />
-          <CountTile label="Generated levels" value={classicTotals.levels} />
-          <CountTile label="Held-out levels" value={classicTotals.heldOut} />
-          <CountTile label="Demo clips" value={classicTotals.demos} />
+          <CountTile label="Templates" value={benchmarkTotals.templates} />
+          <CountTile
+            label="Classic games"
+            value={benchmarkTotals.classicGames}
+          />
+          <CountTile
+            label="CS envs"
+            value={benchmarkTotals.csEnvironments}
+          />
+          <CountTile label="Generated levels" value={benchmarkTotals.levels} />
+          <CountTile label="Held-out levels" value={benchmarkTotals.heldOut} />
+          <CountTile label="Demo clips" value={benchmarkTotals.demos} />
         </div>
       </section>
 
@@ -1187,7 +1472,7 @@ export default function Home() {
                 </div>
               </ControlGroup>
 
-              <ControlGroup title="Classic game template">
+              <ControlGroup title="Benchmark template">
                 <select
                   value={selectedGame.name}
                   onChange={(event) => setSelectedGameName(event.target.value)}
@@ -1195,7 +1480,7 @@ export default function Home() {
                 >
                   {compatibleGames.map((game) => (
                     <option key={game.name} value={game.name}>
-                      {game.name}
+                      {game.category === "cs" ? "CS" : "Classic"}: {game.name}
                     </option>
                   ))}
                 </select>
@@ -1711,7 +1996,7 @@ export default function Home() {
                       </div>
                       <div className="mt-3 grid grid-cols-2 gap-2">
                         <MiniStat
-                          label="Classic games"
+                          label="Templates"
                           value={String(familyGames.length)}
                         />
                         <MiniStat
@@ -1729,23 +2014,24 @@ export default function Home() {
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h2 className="text-base font-semibold">
-                    Classic Game Numbers
+                    Environment Catalog
                   </h2>
                   <p className="mt-1 text-sm text-zinc-500">
-                    Classic-inspired tasks act as familiar priors while keeping
-                    the benchmark procedurally controlled.
+                    Classic-inspired games and CS benchmark environments share
+                    the same prompt-condition protocol.
                   </p>
                 </div>
                 <span className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm font-semibold">
-                  {classicTotals.games} games /{" "}
-                  {classicTotals.levels.toLocaleString()} levels
+                  {benchmarkTotals.templates} templates /{" "}
+                  {benchmarkTotals.levels.toLocaleString()} levels
                 </span>
               </div>
               <div className="mt-4 overflow-x-auto">
                 <table className="w-full min-w-[980px] border-collapse text-left text-sm">
                   <thead>
                     <tr className="border-b border-zinc-200 text-xs uppercase tracking-[0.12em] text-zinc-500">
-                      <th className="py-3 pr-4 font-semibold">Classic game</th>
+                      <th className="py-3 pr-4 font-semibold">Template</th>
+                      <th className="py-3 pr-4 font-semibold">Category</th>
                       <th className="py-3 pr-4 font-semibold">Families</th>
                       <th className="py-3 pr-4 font-semibold">Train</th>
                       <th className="py-3 pr-4 font-semibold">Held-out</th>
@@ -1761,6 +2047,9 @@ export default function Home() {
                     {classicGameBenchmarks.map((game) => (
                       <tr key={game.name} className="border-b border-zinc-100">
                         <td className="py-3 pr-4 font-semibold">{game.name}</td>
+                        <td className="py-3 pr-4">
+                          {game.category === "cs" ? "CS env" : "Classic"}
+                        </td>
                         <td className="py-3 pr-4">
                           {game.familyIds
                             .map(

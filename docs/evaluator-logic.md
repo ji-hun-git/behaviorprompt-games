@@ -9,7 +9,7 @@ now mirrors the experimental variables the paper needs.
 Each estimate depends on:
 
 - task family: procedural, causal, or social
-- classic game template
+- benchmark template, either classic-inspired or CS/RL/POMDP
 - prompt condition: no prompt, text, behavior, or text plus behavior
 - demonstration budget: one action, partial, full success, multiple demos, or
   failed demo
@@ -17,10 +17,11 @@ Each estimate depends on:
 - seed
 - batch size
 
-## Game Template Fields
+## Benchmark Template Fields
 
-Classic-inspired game templates include:
+Benchmark templates include:
 
+- category: classic-inspired game or CS environment
 - train map count
 - held-out map count
 - behavior demo count

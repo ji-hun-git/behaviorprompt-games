@@ -22,8 +22,9 @@ The first interface includes:
 - deterministic simulated evaluator using game complexity, prompt sensitivity,
   agent profile, batch size, demo budget, and prompt condition
 - condition comparison, sufficiency matrix, and benchmark coverage views
-- classic-inspired game counts across 12 task templates, 1,008 generated
-  levels, 276 held-out transfer levels, and 2,990 behavior demo clips
+- benchmark catalog counts across 35 templates: 22 classic-inspired games, 13
+  CS/RL/POMDP environments, 2,980 generated levels, 812 held-out transfer
+  levels, and 8,770 behavior demo clips
 - protocol and dataset registry panels for the first paper direction
 
 ## First Paper Direction
@@ -52,10 +53,21 @@ Positioning guardrail:
 - emphasize failed demos, demo sufficiency, and social-convention inference as
   the sharper research edge
 
-## Classic-Inspired Game Bank
+## Benchmark Catalog
 
-The first pass uses classic game patterns as controlled task priors rather than
-direct reproductions of the original games.
+The first pass uses classic game patterns and CS benchmark environments as
+controlled task priors rather than direct reproductions of the original systems.
+
+Catalog totals:
+
+- 35 benchmark templates
+- 22 classic-inspired games
+- 13 CS/RL/POMDP environments
+- 2,980 generated levels
+- 812 held-out transfer levels
+- 8,770 behavior demo clips
+
+Classic-inspired templates:
 
 | Game template | Train maps | Held-out maps | Demo clips |
 | --- | ---: | ---: | ---: |
@@ -71,6 +83,34 @@ direct reproductions of the original games.
 | Invader Defense | 52 | 20 | 210 |
 | Platform Rescue | 56 | 20 | 220 |
 | Dungeon Key Quest | 84 | 32 | 360 |
+| Asteroid Field | 66 | 24 | 250 |
+| Light Cycle Arena | 54 | 18 | 210 |
+| Missile Defense | 58 | 20 | 220 |
+| River Route | 62 | 22 | 240 |
+| Pyramid Hop | 50 | 18 | 190 |
+| Runner Heist | 70 | 26 | 280 |
+| Boulder Mine | 72 | 28 | 300 |
+| Pinball Control | 48 | 16 | 180 |
+| Escort Shooter | 52 | 20 | 210 |
+| Mini Golf Angle | 44 | 16 | 170 |
+
+CS/RL/POMDP environment templates:
+
+| Environment template | Train maps | Held-out maps | Demo clips |
+| --- | ---: | ---: | ---: |
+| RockSample POMDP | 96 | 36 | 420 |
+| Tiger POMDP | 48 | 18 | 180 |
+| Hallway POMDP | 72 | 28 | 300 |
+| Wumpus World | 80 | 32 | 340 |
+| FrozenLake | 60 | 24 | 240 |
+| Taxi MDP | 72 | 28 | 300 |
+| Cliff Walking | 64 | 24 | 260 |
+| Four Rooms Gridworld | 76 | 28 | 300 |
+| Mountain Car | 56 | 20 | 220 |
+| CartPole Balance | 52 | 20 | 210 |
+| Acrobot Swing-Up | 56 | 20 | 220 |
+| Multi-Armed Bandit | 40 | 16 | 160 |
+| MiniGrid DoorKey | 88 | 34 | 380 |
 
 ## Logic Notes
 
