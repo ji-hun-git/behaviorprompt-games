@@ -19,6 +19,8 @@ The first interface includes:
 - JSON benchmark-manifest export and CSV run export
 - JSON trajectory trace export with actions, observations, rewards, inventory,
   flags, and success/failure status
+- real deterministic core environment rollouts for DoorKey, SwitchBridge, and
+  Ownership gridworlds
 - readiness tracking for environments, demos, agent adapters, metrics, and paper
   positioning
 - deterministic simulated evaluator using game complexity, prompt sensitivity,
@@ -123,6 +125,10 @@ inputs, derived scores, and verdict rules.
 The Lab view also generates a concrete behavior trace for the selected task,
 benchmark template, prompt condition, and demo budget. Trace export is available
 as `behaviorprompt-trace.json`.
+
+The Analysis view can run a core benchmark engine for DoorKey, SwitchBridge, and
+Ownership. See [docs/core-environments.md](docs/core-environments.md) for the
+environment rules and rollout outputs.
 
 ## Development
 

@@ -1,6 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import {
+  CORE_ENVIRONMENTS,
+  runCoreBenchmark,
+  type CoreBenchmarkResult,
+  type CorePromptCondition,
+} from "@/lib/benchmark/environments";
 
 type FamilyId = "procedural" | "causal" | "social";
 type ConditionId = "none" | "text" | "behavior" | "hybrid";
@@ -1238,6 +1244,7 @@ export default function Home() {
   const [nextRunNumber, setNextRunNumber] = useState(4);
   const [readiness, setReadiness] =
     useState<ReadinessItem[]>(initialReadiness);
+  const [coreResults, setCoreResults] = useState<CoreBenchmarkResult[]>([]);
 
   const selectedFamily = taskFamilies.find((family) => family.id === familyId)!;
   const compatibleGames = useMemo(
@@ -1361,6 +1368,32 @@ export default function Home() {
     }),
     [readiness],
   );
+  const coreSummary = useMemo(() => {
+    if (coreResults.length === 0) {
+      return {
+        episodes: 0,
+        successRate: 0,
+        averageReward: 0,
+        violations: 0,
+      };
+    }
+    return {
+      episodes: coreResults.length,
+      successRate: Math.round(
+        (coreResults.filter((result) => result.success).length /
+          coreResults.length) *
+          100,
+      ),
+      averageReward: Math.round(
+        coreResults.reduce((total, result) => total + result.totalReward, 0) /
+          coreResults.length,
+      ),
+      violations: coreResults.reduce(
+        (total, result) => total + result.violations,
+        0,
+      ),
+    };
+  }, [coreResults]);
 
   function queueRun() {
     const id = `run-${String(nextRunNumber).padStart(3, "0")}`;
@@ -1516,6 +1549,11 @@ export default function Home() {
       classicGameBenchmarks,
       readiness,
       currentTrace,
+      coreEngine: {
+        environments: CORE_ENVIRONMENTS,
+        summary: coreSummary,
+        results: coreResults,
+      },
       runs,
     };
     downloadText(
@@ -1583,6 +1621,36 @@ export default function Home() {
       "behaviorprompt-trace.json",
       "application/json",
       JSON.stringify(currentTrace, null, 2),
+    );
+  }
+
+  function runCoreEngineBatch() {
+    setCoreResults(
+      runCoreBenchmark({
+        seed,
+        conditions: promptConditions.map(
+          (condition) => condition.id as CorePromptCondition,
+        ),
+      }),
+    );
+    setActiveTab("analysis");
+  }
+
+  function exportCoreResultsJson() {
+    downloadText(
+      "behaviorprompt-core-engine-results.json",
+      "application/json",
+      JSON.stringify(
+        {
+          generatedAt: new Date().toISOString(),
+          seed,
+          environments: CORE_ENVIRONMENTS,
+          summary: coreSummary,
+          results: coreResults,
+        },
+        null,
+        2,
+      ),
     );
   }
 
@@ -1813,6 +1881,13 @@ export default function Home() {
               >
                 Queue 4-Way Ablation
               </button>
+              <button
+                type="button"
+                onClick={runCoreEngineBatch}
+                className="mt-2 w-full rounded-md border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 hover:border-emerald-600"
+              >
+                Run Core Engine Batch
+              </button>
               <div className="mt-2 grid grid-cols-2 gap-2">
                 <button
                   type="button"
@@ -1829,6 +1904,15 @@ export default function Home() {
                   Export CSV
                 </button>
               </div>
+              {coreResults.length > 0 && (
+                <button
+                  type="button"
+                  onClick={exportCoreResultsJson}
+                  className="mt-2 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium hover:border-zinc-600"
+                >
+                  Export Core Results
+                </button>
+              )}
             </section>
 
             <section className="rounded-lg border border-zinc-200 bg-white p-4">
@@ -2218,6 +2302,103 @@ export default function Home() {
 
         {activeTab === "analysis" && (
           <div className="grid gap-6 lg:grid-cols-2">
+            <section className="rounded-lg border border-zinc-200 bg-white p-4 lg:col-span-2">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-base font-semibold">
+                    Core Engine Results
+                  </h2>
+                  <p className="mt-1 text-sm text-zinc-500">
+                    Deterministic rollouts for DoorKey, SwitchBridge, and
+                    Ownership across prompt conditions.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={runCoreEngineBatch}
+                    className="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800 hover:border-emerald-600"
+                  >
+                    Run Core Engine
+                  </button>
+                  {coreResults.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={exportCoreResultsJson}
+                      className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium hover:border-zinc-600"
+                    >
+                      Export Results
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-4 grid gap-3 md:grid-cols-4">
+                <MiniStat
+                  label="Episodes"
+                  value={String(coreSummary.episodes)}
+                />
+                <MiniStat
+                  label="Success rate"
+                  value={`${coreSummary.successRate}%`}
+                />
+                <MiniStat
+                  label="Avg reward"
+                  value={String(coreSummary.averageReward)}
+                />
+                <MiniStat
+                  label="Violations"
+                  value={String(coreSummary.violations)}
+                />
+              </div>
+
+              {coreResults.length > 0 ? (
+                <div className="mt-4 overflow-x-auto">
+                  <table className="w-full min-w-[920px] border-collapse text-left text-sm">
+                    <thead>
+                      <tr className="border-b border-zinc-200 text-xs uppercase tracking-[0.12em] text-zinc-500">
+                        <th className="py-3 pr-4 font-semibold">Environment</th>
+                        <th className="py-3 pr-4 font-semibold">Family</th>
+                        <th className="py-3 pr-4 font-semibold">Prompt</th>
+                        <th className="py-3 pr-4 font-semibold">Success</th>
+                        <th className="py-3 pr-4 font-semibold">Reward</th>
+                        <th className="py-3 pr-4 font-semibold">Steps</th>
+                        <th className="py-3 pr-4 font-semibold">Violations</th>
+                        <th className="py-3 pr-4 font-semibold">Terminal</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {coreResults.map((result) => (
+                        <tr
+                          key={`${result.environmentId}-${result.promptCondition}`}
+                          className="border-b border-zinc-100"
+                        >
+                          <td className="py-3 pr-4 font-semibold">
+                            {result.environmentName}
+                          </td>
+                          <td className="py-3 pr-4">{result.family}</td>
+                          <td className="py-3 pr-4">{result.conditionLabel}</td>
+                          <td className="py-3 pr-4">
+                            {result.success ? "yes" : "no"}
+                          </td>
+                          <td className="py-3 pr-4">{result.totalReward}</td>
+                          <td className="py-3 pr-4">{result.stepsUsed}</td>
+                          <td className="py-3 pr-4">{result.violations}</td>
+                          <td className="py-3 pr-4 text-zinc-600">
+                            {result.terminalReason}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="mt-4 rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-600">
+                  Run the core engine to compute real deterministic rollouts.
+                </p>
+              )}
+            </section>
+
             <section className="rounded-lg border border-zinc-200 bg-white p-4">
               <h2 className="text-base font-semibold">Condition Comparison</h2>
               <div className="mt-5 space-y-5">
