@@ -10,6 +10,8 @@
     "build": "vinext build",
     "start": "vinext start",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
+    "benchmark:core": "node scripts/run-core-benchmark.mjs",
+    "benchmark:core:seeded": "node scripts/run-core-benchmark.mjs --seed",
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {

@@ -23,6 +23,8 @@ The first interface includes:
   Ownership gridworlds
 - baseline-agent comparison across Random Walk, Direct Greedy, Text Rule,
   Behavior Trace, Hybrid Policy, and Oracle agents
+- command-line benchmark runner that writes reproducible JSON, CSV, and summary
+  artifacts
 - readiness tracking for environments, demos, agent adapters, metrics, and paper
   positioning
 - deterministic simulated evaluator using game complexity, prompt sensitivity,
@@ -133,6 +135,15 @@ Ownership across six baseline agents and four prompt conditions. See
 [docs/core-environments.md](docs/core-environments.md) for the environment rules
 and rollout outputs.
 
+The same core benchmark can run from the command line:
+
+```bash
+npm run benchmark:core
+```
+
+See [docs/benchmark-cli.md](docs/benchmark-cli.md) for output files and seed
+options.
+
 ## Development
 
 Prerequisite:
@@ -146,6 +157,7 @@ npm install
 npm run dev
 npm run lint
 npm run build
+npm run benchmark:core
 ```
 
 The project uses the Sites-compatible `vinext` starter. The main dashboard lives

@@ -13,6 +13,9 @@
 # testing
 /coverage
 
+# generated benchmark outputs
+/benchmark-results/
+
 # local Codex workspace folders
 /work/
 /outputs/
