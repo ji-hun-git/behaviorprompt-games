@@ -1,5 +1,12 @@
 export type CoreEnvironmentId = "doorkey" | "switchbridge" | "ownership";
 export type CorePromptCondition = "none" | "text" | "behavior" | "hybrid";
+export type CoreAgentId =
+  | "random-walk"
+  | "direct-greedy"
+  | "text-rule"
+  | "behavior-trace"
+  | "hybrid-policy"
+  | "oracle";
 export type CoreAction = "north" | "south" | "east" | "west" | "interact" | "wait";
 
 export type CorePosition = {
@@ -39,6 +46,8 @@ export type CoreEpisodeResult = {
   environmentName: string;
   family: CoreEnvironment["family"];
   promptCondition: CorePromptCondition;
+  agentId: CoreAgentId;
+  agentName: string;
   seed: number;
   success: boolean;
   totalReward: number;
@@ -51,6 +60,12 @@ export type CoreEpisodeResult = {
 
 export type CoreBenchmarkResult = CoreEpisodeResult & {
   conditionLabel: string;
+};
+
+export type CoreAgent = {
+  id: CoreAgentId;
+  name: string;
+  description: string;
 };
 
 export const CORE_ENVIRONMENTS: CoreEnvironment[] = [
@@ -93,6 +108,43 @@ const conditionLabels: Record<CorePromptCondition, string> = {
   behavior: "Behavior",
   hybrid: "Text + behavior",
 };
+
+export const CORE_AGENTS: CoreAgent[] = [
+  {
+    id: "random-walk",
+    name: "Random Walk",
+    description: "Deterministic pseudo-random movement with occasional interactions.",
+  },
+  {
+    id: "direct-greedy",
+    name: "Direct Greedy",
+    description: "Ignores prompts and moves directly toward the visible objective.",
+  },
+  {
+    id: "text-rule",
+    name: "Text Rule Agent",
+    description: "Uses prerequisite rules only when text is available.",
+  },
+  {
+    id: "behavior-trace",
+    name: "Behavior Trace Agent",
+    description: "Uses observed demonstrations when behavior is available.",
+  },
+  {
+    id: "hybrid-policy",
+    name: "Hybrid Policy Agent",
+    description: "Combines text and behavior when both are available.",
+  },
+  {
+    id: "oracle",
+    name: "Oracle Planner",
+    description: "Always follows the environment's latent rule.",
+  },
+];
+
+const agentNames: Record<CoreAgentId, string> = Object.fromEntries(
+  CORE_AGENTS.map((agent) => [agent.id, agent.name]),
+) as Record<CoreAgentId, string>;
 
 function samePosition(a: CorePosition | undefined, b: CorePosition) {
   return Boolean(a && a.row === b.row && a.col === b.col);
@@ -172,7 +224,20 @@ function hybridPlan(environment: CoreEnvironment): CoreAction[] {
   return textPlan(environment);
 }
 
-function planFor(environment: CoreEnvironment, condition: CorePromptCondition, seed: number) {
+function randomPlan(environment: CoreEnvironment, seed: number): CoreAction[] {
+  const actions: CoreAction[] = [];
+  const cycle: CoreAction[] = ["east", "south", "interact", "west", "north", "wait"];
+  const length = 12 + (seed % 4);
+  for (let index = 0; index < length; index += 1) {
+    actions.push(cycle[(seed + index * 3) % cycle.length]);
+  }
+  if (seed % 3 === 0) {
+    actions.push(...routeThrough([environment.start, environment.goal], false));
+  }
+  return actions;
+}
+
+function planForPrompt(environment: CoreEnvironment, condition: CorePromptCondition, seed: number) {
   if (condition === "none") {
     const plan = directPlan(environment);
     return seed % 2 === 0 ? plan : ["wait", ...plan];
@@ -180,6 +245,34 @@ function planFor(environment: CoreEnvironment, condition: CorePromptCondition, s
   if (condition === "text") return textPlan(environment);
   if (condition === "behavior") return behaviorPlan(environment);
   return hybridPlan(environment);
+}
+
+function planForAgent(
+  environment: CoreEnvironment,
+  condition: CorePromptCondition,
+  agentId: CoreAgentId,
+  seed: number,
+) {
+  if (agentId === "random-walk") return randomPlan(environment, seed);
+  if (agentId === "direct-greedy") return directPlan(environment);
+  if (agentId === "oracle") return textPlan(environment);
+  if (agentId === "text-rule") {
+    return condition === "text" || condition === "hybrid"
+      ? textPlan(environment)
+      : directPlan(environment);
+  }
+  if (agentId === "behavior-trace") {
+    return condition === "behavior" || condition === "hybrid"
+      ? behaviorPlan(environment)
+      : directPlan(environment);
+  }
+  if (agentId === "hybrid-policy") {
+    if (condition === "hybrid") return hybridPlan(environment);
+    if (condition === "text") return textPlan(environment);
+    if (condition === "behavior") return behaviorPlan(environment);
+    return directPlan(environment);
+  }
+  return planForPrompt(environment, condition, seed);
 }
 
 function applyInteract(
@@ -272,16 +365,18 @@ function applyInteract(
 export function runCoreEpisode({
   environmentId,
   promptCondition,
+  agentId = "hybrid-policy",
   seed,
 }: {
   environmentId: CoreEnvironmentId;
   promptCondition: CorePromptCondition;
+  agentId?: CoreAgentId;
   seed: number;
 }): CoreEpisodeResult {
   const environment =
     CORE_ENVIRONMENTS.find((item) => item.id === environmentId) ??
     CORE_ENVIRONMENTS[0];
-  const actions = planFor(environment, promptCondition, seed);
+  const actions = planForAgent(environment, promptCondition, agentId, seed);
   let position = environment.start;
   let inventory: string[] = [];
   let flags: string[] = [];
@@ -368,6 +463,8 @@ export function runCoreEpisode({
     environmentName: environment.name,
     family: environment.family,
     promptCondition,
+    agentId,
+    agentName: agentNames[agentId],
     seed,
     success,
     totalReward,
@@ -382,18 +479,27 @@ export function runCoreEpisode({
 export function runCoreBenchmark({
   seed,
   conditions,
+  agents = ["hybrid-policy"],
 }: {
   seed: number;
   conditions: CorePromptCondition[];
+  agents?: CoreAgentId[];
 }): CoreBenchmarkResult[] {
   return CORE_ENVIRONMENTS.flatMap((environment, environmentIndex) =>
-    conditions.map((condition, conditionIndex) => ({
-      ...runCoreEpisode({
-        environmentId: environment.id,
-        promptCondition: condition,
-        seed: seed + environmentIndex * 10 + conditionIndex,
-      }),
-      conditionLabel: conditionLabels[condition],
-    })),
+    agents.flatMap((agent, agentIndex) =>
+      conditions.map((condition, conditionIndex) => ({
+        ...runCoreEpisode({
+          environmentId: environment.id,
+          promptCondition: condition,
+          agentId: agent,
+          seed:
+            seed +
+            environmentIndex * 100 +
+            agentIndex * 10 +
+            conditionIndex,
+        }),
+        conditionLabel: conditionLabels[condition],
+      })),
+    ),
   );
 }

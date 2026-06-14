@@ -21,6 +21,8 @@ The first interface includes:
   flags, and success/failure status
 - real deterministic core environment rollouts for DoorKey, SwitchBridge, and
   Ownership gridworlds
+- baseline-agent comparison across Random Walk, Direct Greedy, Text Rule,
+  Behavior Trace, Hybrid Policy, and Oracle agents
 - readiness tracking for environments, demos, agent adapters, metrics, and paper
   positioning
 - deterministic simulated evaluator using game complexity, prompt sensitivity,
@@ -127,8 +129,9 @@ benchmark template, prompt condition, and demo budget. Trace export is available
 as `behaviorprompt-trace.json`.
 
 The Analysis view can run a core benchmark engine for DoorKey, SwitchBridge, and
-Ownership. See [docs/core-environments.md](docs/core-environments.md) for the
-environment rules and rollout outputs.
+Ownership across six baseline agents and four prompt conditions. See
+[docs/core-environments.md](docs/core-environments.md) for the environment rules
+and rollout outputs.
 
 ## Development
 

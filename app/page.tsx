@@ -2,9 +2,11 @@
 
 import { useMemo, useState } from "react";
 import {
+  CORE_AGENTS,
   CORE_ENVIRONMENTS,
   runCoreBenchmark,
   type CoreBenchmarkResult,
+  type CoreAgentId,
   type CorePromptCondition,
 } from "@/lib/benchmark/environments";
 
@@ -1394,6 +1396,43 @@ export default function Home() {
       ),
     };
   }, [coreResults]);
+  const coreAgentSummary = useMemo(
+    () =>
+      CORE_AGENTS.map((agent) => {
+        const agentResults = coreResults.filter(
+          (result) => result.agentId === agent.id,
+        );
+        if (agentResults.length === 0) {
+          return {
+            ...agent,
+            episodes: 0,
+            successRate: 0,
+            averageReward: 0,
+            violations: 0,
+          };
+        }
+        return {
+          ...agent,
+          episodes: agentResults.length,
+          successRate: Math.round(
+            (agentResults.filter((result) => result.success).length /
+              agentResults.length) *
+              100,
+          ),
+          averageReward: Math.round(
+            agentResults.reduce(
+              (total, result) => total + result.totalReward,
+              0,
+            ) / agentResults.length,
+          ),
+          violations: agentResults.reduce(
+            (total, result) => total + result.violations,
+            0,
+          ),
+        };
+      }),
+    [coreResults],
+  );
 
   function queueRun() {
     const id = `run-${String(nextRunNumber).padStart(3, "0")}`;
@@ -1551,7 +1590,9 @@ export default function Home() {
       currentTrace,
       coreEngine: {
         environments: CORE_ENVIRONMENTS,
+        agents: CORE_AGENTS,
         summary: coreSummary,
+        agentSummary: coreAgentSummary,
         results: coreResults,
       },
       runs,
@@ -1631,6 +1672,7 @@ export default function Home() {
         conditions: promptConditions.map(
           (condition) => condition.id as CorePromptCondition,
         ),
+        agents: CORE_AGENTS.map((agent) => agent.id as CoreAgentId),
       }),
     );
     setActiveTab("analysis");
@@ -1645,7 +1687,9 @@ export default function Home() {
           generatedAt: new Date().toISOString(),
           seed,
           environments: CORE_ENVIRONMENTS,
+          agents: CORE_AGENTS,
           summary: coreSummary,
+          agentSummary: coreAgentSummary,
           results: coreResults,
         },
         null,
@@ -2358,6 +2402,7 @@ export default function Home() {
                     <thead>
                       <tr className="border-b border-zinc-200 text-xs uppercase tracking-[0.12em] text-zinc-500">
                         <th className="py-3 pr-4 font-semibold">Environment</th>
+                        <th className="py-3 pr-4 font-semibold">Agent</th>
                         <th className="py-3 pr-4 font-semibold">Family</th>
                         <th className="py-3 pr-4 font-semibold">Prompt</th>
                         <th className="py-3 pr-4 font-semibold">Success</th>
@@ -2370,12 +2415,13 @@ export default function Home() {
                     <tbody>
                       {coreResults.map((result) => (
                         <tr
-                          key={`${result.environmentId}-${result.promptCondition}`}
+                          key={`${result.environmentId}-${result.agentId}-${result.promptCondition}`}
                           className="border-b border-zinc-100"
                         >
                           <td className="py-3 pr-4 font-semibold">
                             {result.environmentName}
                           </td>
+                          <td className="py-3 pr-4">{result.agentName}</td>
                           <td className="py-3 pr-4">{result.family}</td>
                           <td className="py-3 pr-4">{result.conditionLabel}</td>
                           <td className="py-3 pr-4">
@@ -2396,6 +2442,46 @@ export default function Home() {
                 <p className="mt-4 rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-600">
                   Run the core engine to compute real deterministic rollouts.
                 </p>
+              )}
+
+              {coreResults.length > 0 && (
+                <div className="mt-5">
+                  <h3 className="text-sm font-semibold">Agent Leaderboard</h3>
+                  <div className="mt-3 grid gap-3 md:grid-cols-3">
+                    {coreAgentSummary.map((agent) => (
+                      <div
+                        key={agent.id}
+                        className="rounded-lg border border-zinc-200 bg-zinc-50 p-4"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold">{agent.name}</p>
+                            <p className="mt-1 text-xs leading-5 text-zinc-500">
+                              {agent.description}
+                            </p>
+                          </div>
+                          <span className="rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs font-semibold">
+                            {agent.successRate}%
+                          </span>
+                        </div>
+                        <div className="mt-3 grid grid-cols-3 gap-2">
+                          <MiniStat
+                            label="Episodes"
+                            value={String(agent.episodes)}
+                          />
+                          <MiniStat
+                            label="Reward"
+                            value={String(agent.averageReward)}
+                          />
+                          <MiniStat
+                            label="Violations"
+                            value={String(agent.violations)}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
             </section>
 

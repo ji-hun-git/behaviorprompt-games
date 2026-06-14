@@ -26,6 +26,22 @@ usually try a direct route and can violate the task rule. Text, behavior, and
 hybrid plans use the relevant prerequisite, intervention, or social interaction
 before completing the task.
 
+## Baseline Agents
+
+The core engine compares six deterministic baseline agents:
+
+| Agent | Behavior |
+| --- | --- |
+| Random Walk | Pseudo-random movement with occasional interactions. |
+| Direct Greedy | Ignores prompts and moves directly toward the visible objective. |
+| Text Rule Agent | Uses prerequisite rules only when text is available. |
+| Behavior Trace Agent | Uses observed demonstrations when behavior is available. |
+| Hybrid Policy Agent | Combines text and behavior when both are available. |
+| Oracle Planner | Always follows the environment's latent rule. |
+
+The dashboard batch runs all six agents across three environments and four
+prompt conditions, producing 72 rollout episodes.
+
 ## Rollout Outputs
 
 Each episode records:
@@ -33,6 +49,7 @@ Each episode records:
 - environment id and name
 - family
 - prompt condition
+- agent id and name
 - seed
 - success
 - total reward
